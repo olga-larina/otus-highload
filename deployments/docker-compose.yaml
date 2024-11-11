@@ -1,0 +1,37 @@
+services:
+
+  backend-migrator:
+    image: backend-migrator:develop
+    build:
+      context: ../backend
+      dockerfile: build/migrator/Dockerfile
+    environment:
+      - DB_URI=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+      - DB_TYPE=postgres
+    volumes:
+      - "../backend/migrations:/app/migrations"
+    restart: on-failure
+    depends_on:
+      db:
+        condition: service_healthy
+
+  backend-server:
+    image: backend-server:develop
+    build:
+      context: ../backend
+      dockerfile: build/server/Dockerfile
+    environment:
+      - DB_URI=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+      - HTTP_SERVER_HOST=${HTTP_SERVER_HOST}
+      - HTTP_SERVER_PORT=${HTTP_SERVER_PORT}
+      - AUTH_PRIVATE_KEY=${AUTH_PRIVATE_KEY}
+    ports:
+      - "8080:8080"
+    volumes:
+      - "../backend/configs/server_config.yaml:/etc/backend/server/config.yaml"
+    restart: always
+    depends_on:
+      backend-migrator:
+          condition: service_completed_successfully
+      db:
+        condition: service_healthy

@@ -1,0 +1,24 @@
+# Конфиг для проверки
+# Logger config
+logger:
+  level: "INFO"
+# HTTP server config
+httpServer:
+  host: 0.0.0.0
+  port: 8080
+  readTimeout: "5s"
+# Database config
+database:
+  driver: "pgx"
+  uri: postgres://otus:password@localhost:5432/backend
+# Timezone
+timezone: "Europe/Moscow"
+# Auth config
+auth:
+  # openssl ecparam -name prime256v1 -genkey -noout -out ecprivatekey.pem
+  PrivateKey: |-
+    -----BEGIN EC PRIVATE KEY-----
+    MHcCAQEEIN2dALnjdcZaIZg4QuA6Dw+kxiSW502kJfmBN3priIhPoAoGCCqGSM49
+    AwEHoUQDQgAE4pPyvrB9ghqkT1Llk0A42lixkugFd/TBdOp6wf69O9Nndnp4+HcR
+    s9SlG/8hjB2Hz42v4p3haKWv3uS1C6ahCQ==
+    -----END EC PRIVATE KEY-----

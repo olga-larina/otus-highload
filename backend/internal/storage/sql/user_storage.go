@@ -60,3 +60,36 @@ func (s *UserStorage) GetUserById(ctx context.Context, id *model.UserId) (*model
 	err = rows.StructScan(&user)
 	return &user, err
 }
+
+const searchByNameSQL = `
+SELECT id, first_name, second_name, city, gender, birthdate, biography
+FROM users
+WHERE first_name LIKE :first_name AND second_name LIKE :last_name
+ORDER BY id
+`
+
+func (s *UserStorage) SearchUsersByName(ctx context.Context, firstNamePrefix string, lastNamePrefix string) ([]*model.User, error) {
+	stmt, err := s.db.sqlDb.PrepareNamedContext(ctx, searchByNameSQL)
+	if err != nil {
+		return nil, fmt.Errorf("cannot prepare context for getting user by id: %w", err)
+	}
+
+	rows, err := stmt.QueryxContext(ctx, map[string]interface{}{
+		"first_name": firstNamePrefix + "%",
+		"last_name":  lastNamePrefix + "%",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("cannot query context for searching users by name: %w", err)
+	}
+
+	users := make([]*model.User, 0)
+	for rows.Next() {
+		var user model.User
+		err = rows.StructScan(&user)
+		if err != nil {
+			return nil, fmt.Errorf("cannot get result for searching users by name: %w", err)
+		}
+		users = append(users, &user)
+	}
+	return users, nil
+}

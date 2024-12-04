@@ -16,6 +16,7 @@ type UserService struct {
 type UserStorage interface {
 	CreateUser(ctx context.Context, user *model.UserExtended) error
 	GetUserById(ctx context.Context, id *model.UserId) (*model.User, error)
+	SearchUsersByName(ctx context.Context, firstNamePrefix string, lastNamePrefix string) ([]*model.User, error)
 }
 
 type PasswordHasher interface {
@@ -60,4 +61,8 @@ func (s *UserService) RegisterUser(ctx context.Context, registerBody *model.Post
 		return nil, err
 	}
 	return &userId, nil
+}
+
+func (s *UserService) SearchByName(ctx context.Context, firstNamePrefix string, lastNamePrefix string) ([]*model.User, error) {
+	return s.storage.SearchUsersByName(ctx, firstNamePrefix, lastNamePrefix)
 }

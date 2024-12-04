@@ -21,6 +21,7 @@ type UserService interface {
 	GetMe(ctx context.Context) (*model.User, error)
 	GetUserById(ctx context.Context, id *model.UserId) (*model.User, error)
 	RegisterUser(ctx context.Context, registerBody *model.PostUserRegisterJSONRequestBody) (*model.UserId, error)
+	SearchByName(ctx context.Context, firstNamePrefix string, lastNamePrefix string) ([]*model.User, error)
 }
 
 func NewServer(
@@ -100,7 +101,17 @@ func (s *Server) GetUserMe(ctx context.Context, request GetUserMeRequestObject) 
 
 // (GET /user/search)
 func (s *Server) GetUserSearch(ctx context.Context, request GetUserSearchRequestObject) (GetUserSearchResponseObject, error) {
-	return GetUserSearch400Response{}, nil
+	users, err := s.userService.SearchByName(ctx, request.Params.FirstName, request.Params.LastName)
+	if err != nil {
+		response := GetUserSearch500JSONResponse{}
+		response.Body.Message = err.Error()
+		return response, nil
+	}
+	response := GetUserSearch200JSONResponse{}
+	for _, user := range users {
+		response = append(response, *user)
+	}
+	return response, nil
 }
 
 // (GET /dialog/{user_id}/list)

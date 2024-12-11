@@ -44,7 +44,7 @@ build-img-migrator:
 # запустить образ миграций
 .PHONY: run-img-migrator
 run-img-migrator: build-img-migrator
-	docker run $(DOCKER_IMG_MIGRATOR) -d
+	docker run -d $(DOCKER_IMG_MIGRATOR)
 
 # собрать образ сервис
 .PHONY: build-img
@@ -57,7 +57,7 @@ build-img:
 # запустить образ сервиса
 .PHONY: run-img
 run-img: build-img
-	docker run $(DOCKER_IMG_BACKEND_SERVER) -d
+	docker run -d $(DOCKER_IMG_BACKEND_SERVER)
 
 # применить миграции Postgres (в ручном режиме)
 .PHONY: migrate
@@ -69,22 +69,42 @@ migrate:
 migrate-down:
 	goose -dir migrations postgres "postgres://otus:password@localhost:5432/backend" down
 
-# поднять окружение
+# поднять окружение (только БД master)
 .PHONY: up-infra
 up-infra:
-	docker compose --env-file deployments/.env -f deployments/docker-compose-infra.yaml up -d
+	docker compose --env-file deployments/.env -f deployments/docker-compose-db-master.yaml up -d
 
-# потушить окружение
+# потушить окружение (только БД master)
 .PHONY: down-infra
 down-infra:
-	docker compose --env-file deployments/.env -f deployments/docker-compose-infra.yaml down
+	docker compose --env-file deployments/.env -f deployments/docker-compose-db-master.yaml down
 
-# поднять сервисы и окружение
+# поднять сервисы и окружение (БД master)
 .PHONY: up
 up:
-	docker compose --env-file deployments/.env -f deployments/docker-compose-infra.yaml -f deployments/docker-compose.yaml up -d --build
+	docker compose --env-file deployments/.env -f deployments/docker-compose-db-master.yaml -f deployments/docker-compose.yaml up -d --build
 
-# потушить сервисы и окружение
+# потушить сервисы и окружение (БД master)
 .PHONY: down
 down:
-	docker compose --env-file deployments/.env -f deployments/docker-compose-infra.yaml -f deployments/docker-compose.yaml down
+	docker compose --env-file deployments/.env -f deployments/docker-compose-db-master.yaml -f deployments/docker-compose.yaml down
+
+# поднять сервисы и окружение (БД master+мониторинги)
+.PHONY: up-mon
+up-mon:
+	docker compose --env-file deployments/.env -f deployments/docker-compose-db-master.yaml -f deployments/docker-compose-monitoring.yaml -f deployments/docker-compose.yaml up -d --build
+
+# потушить сервисы и окружение (БД master+мониторинги)
+.PHONY: down-mon
+down-mon:
+	docker compose --env-file deployments/.env -f deployments/docker-compose-db-master.yaml -f deployments/docker-compose-monitoring.yaml -f deployments/docker-compose.yaml down
+
+# поднять сервисы и окружение (БД master и реплики+мониторинги)
+.PHONY: up-replicated
+up-replicated:
+	docker compose --env-file deployments/.env_replicated -f deployments/docker-compose-db-master.yaml -f deployments/docker-compose-db-replicas.yaml -f deployments/docker-compose-monitoring.yaml -f deployments/docker-compose.yaml up -d --build
+
+# потушить сервисы и окружение (БД master и реплики+мониторинги)
+.PHONY: down-replicated
+down-replicated:
+	docker compose --env-file deployments/.env_replicated -f deployments/docker-compose-db-master.yaml -f deployments/docker-compose-db-replicas.yaml -f deployments/docker-compose-monitoring.yaml -f deployments/docker-compose.yaml down

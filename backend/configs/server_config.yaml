@@ -8,8 +8,18 @@ httpServer:
   readTimeout: "5s"
 # Database config
 database:
-  driver: "pgx"
-  uri: ${DB_URI}
+  master: # master
+    uri: ${DB_MASTER_URI}
+    connect:
+      maxConns: 80
+      maxConnLifetime: "1h"
+      maxConnIdleTime: "10m"
+  replicas: # replicas, may be absent or uri may be empty
+    uri: ${DB_REPLICAS_URI}
+    connect:
+      maxConns: 80
+      maxConnLifetime: "1h"
+      maxConnIdleTime: "10m"
 # Timezone
 timezone: "Europe/Moscow"
 # Auth config

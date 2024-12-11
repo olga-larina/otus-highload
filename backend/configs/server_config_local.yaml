@@ -9,8 +9,18 @@ httpServer:
   readTimeout: "5s"
 # Database config
 database:
-  driver: "pgx"
-  uri: postgres://otus:password@localhost:5432/backend
+  master: # master
+    uri: postgres://otus:password@localhost:5432/backend
+    connect:
+      maxConns: 80
+      maxConnLifetime: "1h"
+      maxConnIdleTime: "10m"
+  # replicas: # replicas, may be absent or uri may be empty
+  #   uri: "postgres://otus:password@localhost:5433/backend,postgres://otus:password@localhost:5434/backend" # uri list
+  #   connect:
+  #     maxConns: 80
+  #     maxConnLifetime: "1h"
+  #     maxConnIdleTime: "10m"
 # Timezone
 timezone: "Europe/Moscow"
 # Auth config

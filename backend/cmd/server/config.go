@@ -27,8 +27,19 @@ type HTTPServerConfig struct {
 }
 
 type DatabaseConfig struct {
-	Driver string `mapstructure:"driver"`
-	URI    string `mapstructure:"uri"`
+	Master   DatabasePoolConfig `mapstructure:"master"`
+	Replicas DatabasePoolConfig `mapstructure:"replicas"`
+}
+
+type DatabasePoolConfig struct {
+	URI           string                `mapstructure:"uri"`
+	ConnectParams DatabaseConnectConfig `mapstructure:"connect"`
+}
+
+type DatabaseConnectConfig struct {
+	MaxConns        int32         `mapstructure:"maxConns"`
+	MaxConnLifetime time.Duration `mapstructure:"maxConnLifetime"`
+	MaxConnIdleTime time.Duration `mapstructure:"maxConnIdleTime"`
 }
 
 type AuthConfig struct {

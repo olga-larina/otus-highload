@@ -7,17 +7,20 @@ import (
 	"log"
 	"net/http"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/getkin/kin-openapi/openapi3filter"
 	"github.com/gorilla/mux"
 	middleware "github.com/oapi-codegen/nethttp-middleware"
+
 	"github.com/olga-larina/otus-highload/backend/internal/logger"
 	internalhttp "github.com/olga-larina/otus-highload/backend/internal/server/http"
 	"github.com/olga-larina/otus-highload/backend/internal/service"
 	"github.com/olga-larina/otus-highload/backend/internal/service/auth"
 	sqlstorage "github.com/olga-larina/otus-highload/backend/internal/storage/sql"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/cors"
 )
 
@@ -54,7 +57,19 @@ func main() {
 	defer cancel()
 
 	// storages
-	db := sqlstorage.NewDb(config.Database.Driver, config.Database.URI)
+	var storageReplicaConfigs []*sqlstorage.DbConfig
+	if len(config.Database.Replicas.URI) > 0 {
+		replicasUri := strings.Split(config.Database.Replicas.URI, ",")
+		storageReplicaConfigs = make([]*sqlstorage.DbConfig, len(replicasUri))
+		for i, replicaUri := range replicasUri {
+			storageReplicaConfigs[i] = parseDbConfig(replicaUri, config.Database.Replicas.ConnectParams)
+		}
+	}
+	db, err := sqlstorage.NewReplicatedDb(ctx, parseDbConfig(config.Database.Master.URI, config.Database.Master.ConnectParams), storageReplicaConfigs)
+	if err != nil {
+		logger.Error(ctx, err, "failed to create db")
+		return
+	}
 	if err := db.Connect(ctx); err != nil {
 		logger.Error(ctx, err, "failed to connect to db")
 		return
@@ -90,6 +105,8 @@ func main() {
 	)
 
 	router := mux.NewRouter()
+	router.Handle("/metrics", promhttp.Handler()).Methods("GET")
+
 	internalhttp.HandlerWithOptions(
 		serverHandler,
 		internalhttp.GorillaServerOptions{
@@ -116,7 +133,9 @@ func main() {
 			},
 		})
 	router.Use(internalhttp.LoggingMiddleware)
-	router.Use(validator)
+	router.Use(func(next http.Handler) http.Handler {
+		return internalhttp.SkipValidatorForMetrics(validator, next)
+	})
 
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"*"},
@@ -148,4 +167,13 @@ func main() {
 	}
 
 	<-ctx.Done()
+}
+
+func parseDbConfig(uri string, cfg DatabaseConnectConfig) *sqlstorage.DbConfig {
+	return &sqlstorage.DbConfig{
+		Uri:             uri,
+		MaxConns:        cfg.MaxConns,
+		MaxConnLifetime: cfg.MaxConnLifetime,
+		MaxConnIdleTime: cfg.MaxConnIdleTime,
+	}
 }

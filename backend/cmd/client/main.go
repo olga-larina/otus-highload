@@ -33,6 +33,8 @@ func main() {
 	var userId, token string
 	password := "Password@12345"
 
+	withoutTokenFunc := func(ctx context.Context, req *http.Request) error { return nil }
+
 	// --------- Проверка корректных запросов
 
 	// регистрация пользователя
@@ -65,6 +67,12 @@ func main() {
 		return
 	}
 
+	// поиск пользователей
+	err = usersSearch(ctx, c, addTokenFunc, "Конст", "Оси")
+	if err != nil {
+		return
+	}
+
 	// --------- Проверка некорректных запросов
 
 	// логин с некорректным паролем
@@ -74,7 +82,10 @@ func main() {
 	userGet(ctx, c, "ABC")
 
 	// получение информации о себе без токена
-	getMe(ctx, c, func(ctx context.Context, req *http.Request) error { return nil })
+	getMe(ctx, c, withoutTokenFunc)
+
+	// поиск пользователей без токена
+	usersSearch(ctx, c, withoutTokenFunc, "Конст", "Оси")
 }
 
 func userRegister(ctx context.Context, c *clienthttp.ClientWithResponses, password string) (string, error) {
@@ -143,6 +154,20 @@ func getMe(ctx context.Context, c *clienthttp.ClientWithResponses, addTokenFunc 
 		return errors.New("failed get me")
 	}
 	logger.Info(ctx, "get me succeeded", "user", getMeResponse.JSON200)
+	return nil
+}
+
+func usersSearch(ctx context.Context, c *clienthttp.ClientWithResponses, addTokenFunc clienthttp.RequestEditorFn, firstName string, lastName string) error {
+	usersSearchResponse, err := c.GetUserSearchWithResponse(ctx, &model.GetUserSearchParams{FirstName: firstName, LastName: lastName}, addTokenFunc)
+	if err != nil {
+		logger.Error(ctx, err, "failed searching users")
+		return err
+	}
+	if usersSearchResponse.StatusCode() != 200 {
+		logger.Warn(ctx, "failed searching users", "response", string(usersSearchResponse.Body), "status", usersSearchResponse.StatusCode())
+		return errors.New("failed searching users")
+	}
+	logger.Info(ctx, "users found by names", "users", usersSearchResponse.JSON200)
 	return nil
 }
 

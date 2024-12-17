@@ -2,6 +2,7 @@ package sqlstorage
 
 import (
 	"context"
+	"errors"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/olga-larina/otus-highload/backend/internal/model"
@@ -29,10 +30,10 @@ func (s *LoginStorage) GetPasswordHash(ctx context.Context, id *model.UserId) ([
 	var passwordHash []byte
 	err := row.Scan(&passwordHash)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, model.ErrUserNotFound
 		}
 		return nil, err
 	}
-	return passwordHash, err
+	return passwordHash, nil
 }

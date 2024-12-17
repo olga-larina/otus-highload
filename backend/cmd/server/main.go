@@ -14,11 +14,17 @@ import (
 	"github.com/getkin/kin-openapi/openapi3filter"
 	"github.com/gorilla/mux"
 	middleware "github.com/oapi-codegen/nethttp-middleware"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/olga-larina/otus-highload/backend/internal/logger"
+	"github.com/olga-larina/otus-highload/backend/internal/queue/rabbit"
 	internalhttp "github.com/olga-larina/otus-highload/backend/internal/server/http"
 	"github.com/olga-larina/otus-highload/backend/internal/service"
 	"github.com/olga-larina/otus-highload/backend/internal/service/auth"
+	cacher "github.com/olga-larina/otus-highload/backend/internal/service/cache"
+	"github.com/olga-larina/otus-highload/backend/internal/service/cache/converter"
+	redis_cache "github.com/olga-larina/otus-highload/backend/internal/service/cache/redis"
+	"github.com/olga-larina/otus-highload/backend/internal/service/feed"
 	sqlstorage "github.com/olga-larina/otus-highload/backend/internal/storage/sql"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/cors"
@@ -81,6 +87,71 @@ func main() {
 	}()
 	userStorage := sqlstorage.NewUserStorage(db)
 	loginStorage := sqlstorage.NewLoginStorage(db)
+	friendStorage := sqlstorage.NewFriendStorage(db)
+	postStorage := sqlstorage.NewPostStorage(db)
+	postFeedStorage := sqlstorage.NewPostFeedStorage(db)
+
+	// queue
+	queue := rabbit.NewQueue(
+		config.Queue.URI,
+		config.Queue.ExchangeName,
+		config.Queue.ExchangeType,
+		config.Queue.QueueName,
+		config.Queue.RoutingKey,
+	)
+	consumer := queue.NewConsumer(config.Queue.ConsumerTag)
+	if err := queue.Start(ctx); err != nil {
+		logger.Error(ctx, err, "queue failed to start")
+		return
+	}
+	publisher := queue.NewPublisher()
+	if err := queue.Start(ctx); err != nil {
+		logger.Error(ctx, err, "queue failed to start")
+		return
+	}
+
+	// subscribers cache
+	subscriberRedisOpts, err := redis.ParseURL(config.Cache.SubscribersCache.URI)
+	if err != nil {
+		logger.Error(ctx, err, "failed to parse subscribers cache url")
+		return
+	}
+	subscribersConverter := converter.NewSubscriberStringConverter()
+	subscriberRedisCache, err := redis_cache.NewRedisCache(subscriberRedisOpts, config.Cache.SubscribersCache.Ttl, subscribersConverter, "subscribers")
+	if err != nil {
+		logger.Error(ctx, err, "failed to create subscribers cache")
+		return
+	}
+	subscriberCacher := cacher.NewSubscriberCacher(subscriberRedisCache, friendStorage)
+
+	// post feed cache
+	postFeedRedisOpts, err := redis.ParseURL(config.Cache.PostFeedCache.URI)
+	if err != nil {
+		logger.Error(ctx, err, "failed to parse post feed cache url")
+		return
+	}
+	postFeedConverter := converter.NewPostFeedStringConverter()
+	postFeedRedisCache, err := redis_cache.NewRedisCache(postFeedRedisOpts, config.Cache.PostFeedCache.Ttl, postFeedConverter, "postFeed")
+	if err != nil {
+		logger.Error(ctx, err, "failed to create post feed cache")
+		return
+	}
+	postFeedCacher := cacher.NewPostFeedCacher(postFeedRedisCache, postFeedStorage, config.PostFeed.MaxSize)
+
+	// post feed updater
+	postFeedUpdater := feed.NewPostFeedUpdater(
+		postFeedCacher,
+		subscriberCacher,
+		consumer,
+	)
+
+	if err := postFeedUpdater.Start(ctx); err != nil {
+		logger.Error(ctx, err, "postFeedUpdater failed to start")
+		return
+	}
+
+	// post feed notifications
+	postFeedNotificationService := feed.NewPostFeedNotificationService(publisher)
 
 	// services
 	authenticator, err := auth.NewFakeAuthenticator(config.Auth.PrivateKey)
@@ -88,15 +159,23 @@ func main() {
 		logger.Error(ctx, err, "failed to create authenticator")
 		return
 	}
+	authService := auth.NewAuthService()
 	passwordService := service.NewPasswordService()
 	loginService := service.NewLoginService(loginStorage, passwordService, authenticator)
 	userService := service.NewUserService(userStorage, passwordService)
+	friendService := service.NewFriendService(friendStorage, postFeedNotificationService)
+	postService := service.NewPostService(postStorage, postFeedNotificationService)
+	postFeedService := feed.NewPostFeedService(postFeedCacher, config.PostFeed.MaxSize)
 
 	// http server
 	httpServerAddr := fmt.Sprintf("%s:%s", config.HTTPServer.Host, config.HTTPServer.Port)
 	server := internalhttp.NewServer(
+		authService,
 		loginService,
 		userService,
+		friendService,
+		postService,
+		postFeedService,
 	)
 	serverHandler := internalhttp.NewStrictHandler(
 		server,
@@ -105,7 +184,21 @@ func main() {
 	)
 
 	router := mux.NewRouter()
+	// роут с метриками
 	router.Handle("/metrics", promhttp.Handler()).Methods("GET")
+	// роут с инвалидацией кеша
+	router.HandleFunc("/internal/cache/invalidate", func() func(http.ResponseWriter, *http.Request) {
+		return func(w http.ResponseWriter, r *http.Request) {
+			err := postFeedNotificationService.NotifyInvalidateAll(ctx)
+			if err != nil {
+				logger.Error(ctx, err, "failed notifying cache invalidation")
+				w.WriteHeader(http.StatusInternalServerError)
+			} else {
+				logger.Info(ctx, "succeeded notifying cache invalidation")
+				w.WriteHeader(http.StatusOK)
+			}
+		}
+	}()).Methods("POST")
 
 	internalhttp.HandlerWithOptions(
 		serverHandler,
@@ -134,7 +227,7 @@ func main() {
 		})
 	router.Use(internalhttp.LoggingMiddleware)
 	router.Use(func(next http.Handler) http.Handler {
-		return internalhttp.SkipValidatorForMetrics(validator, next)
+		return internalhttp.SkipValidatorForMetricsAndInternal(validator, next)
 	})
 
 	c := cors.New(cors.Options{
@@ -167,6 +260,18 @@ func main() {
 	}
 
 	<-ctx.Done()
+
+	if err := consumer.Stop(ctx); err != nil {
+		logger.Error(ctx, err, "failed to stop consumer")
+	}
+
+	if err := postFeedUpdater.Stop(ctx); err != nil {
+		logger.Error(ctx, err, "failed to stop postFeedUpdater")
+	}
+
+	if err := queue.Stop(ctx); err != nil {
+		logger.Error(ctx, err, "failed to stop queue")
+	}
 }
 
 func parseDbConfig(uri string, cfg DatabaseConnectConfig) *sqlstorage.DbConfig {

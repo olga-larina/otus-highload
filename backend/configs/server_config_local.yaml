@@ -1,7 +1,7 @@
 # Конфиг для проверки
 # Logger config
 logger:
-  level: "INFO"
+  level: "DEBUG"
 # HTTP server config
 httpServer:
   host: 0.0.0.0
@@ -32,3 +32,22 @@ auth:
     AwEHoUQDQgAE4pPyvrB9ghqkT1Llk0A42lixkugFd/TBdOp6wf69O9Nndnp4+HcR
     s9SlG/8hjB2Hz42v4p3haKWv3uS1C6ahCQ==
     -----END EC PRIVATE KEY-----
+# Queue config
+queue:
+  uri: amqp://rmuser:rmpassword@localhost:5672/
+  exchangeName: "backend-events"
+  exchangeType: "direct" # direct|fanout|topic|x-custom
+  queueName: "post-feed-queue"
+  routingKey: "post-feed"
+  consumerTag: "backends-consumer"
+# Post feed config
+postFeed:
+  maxSize: 1000 # максимальное количество постов в ленте
+# Caches config (use different db)
+caches:
+  subscribers:
+    uri: redis://localhost:6379/0?protocol=3&db=0
+    ttl: 60m
+  postFeed:
+    uri: redis://localhost:6379/1?protocol=3&db=1
+    ttl: 60m

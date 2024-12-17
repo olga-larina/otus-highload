@@ -129,6 +129,11 @@
       },
       "/user/get/{id}": {
         "get": {
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
           "description": "Получение анкеты пользователя",
           "parameters": [
             {
@@ -154,6 +159,9 @@
             },
             "400": {
               "description": "Невалидные данные"
+            },
+            "401": {
+              "$ref": "#/components/responses/401"
             },
             "404": {
               "description": "Анкета не найдена"
@@ -191,6 +199,9 @@
             "400": {
               "description": "Невалидные данные"
             },
+            "401": {
+              "$ref": "#/components/responses/401"
+            },
             "404": {
               "description": "Анкета не найдена"
             },
@@ -205,6 +216,11 @@
       },
       "/user/search": {
         "get": {
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
           "description": "Поиск анкет",
           "parameters": [
             {
@@ -247,6 +263,9 @@
             "400": {
               "description": "Невалидные данные"
             },
+            "401": {
+              "$ref": "#/components/responses/401"
+            },
             "500": {
               "$ref": "#/components/responses/5xx"
             },
@@ -283,6 +302,9 @@
             "401": {
               "$ref": "#/components/responses/401"
             },
+            "404": {
+              "description": "Пользователь не найден"
+            },
             "500": {
               "$ref": "#/components/responses/5xx"
             },
@@ -318,6 +340,9 @@
             },
             "401": {
               "$ref": "#/components/responses/401"
+            },
+            "404": {
+              "description": "Пользователь не найден"
             },
             "500": {
               "$ref": "#/components/responses/5xx"
@@ -367,6 +392,9 @@
             "401": {
               "$ref": "#/components/responses/401"
             },
+            "404": {
+              "description": "Пользователь не найден"
+            },
             "500": {
               "$ref": "#/components/responses/5xx"
             },
@@ -411,6 +439,9 @@
             "401": {
               "$ref": "#/components/responses/401"
             },
+            "404": {
+              "description": "Пост не найден"
+            },
             "500": {
               "$ref": "#/components/responses/5xx"
             },
@@ -447,6 +478,9 @@
             "401": {
               "$ref": "#/components/responses/401"
             },
+            "404": {
+              "description": "Пост не найден"
+            },
             "500": {
               "$ref": "#/components/responses/5xx"
             },
@@ -458,6 +492,11 @@
       },
       "/post/get/{id}": {
         "get": {
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
           "parameters": [
             {
               "name": "id",
@@ -484,6 +523,9 @@
             },
             "401": {
               "$ref": "#/components/responses/401"
+            },
+            "404": {
+              "description": "Пост не найден"
             },
             "500": {
               "$ref": "#/components/responses/5xx"

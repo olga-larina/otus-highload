@@ -14,6 +14,9 @@ type Config struct {
 	Database   DatabaseConfig   `mapstructure:"database"`
 	Timezone   string           `mapstructure:"timezone"`
 	Auth       AuthConfig       `mapstructure:"auth"`
+	Queue      QueueConfig      `mapstructure:"queue"`
+	Cache      CachesConfig     `mapstructure:"caches"`
+	PostFeed   PostFeedConfig   `mapstructure:"postFeed"`
 }
 
 type LoggerConfig struct {
@@ -44,6 +47,29 @@ type DatabaseConnectConfig struct {
 
 type AuthConfig struct {
 	PrivateKey string `mapstructure:"privateKey"`
+}
+
+type QueueConfig struct {
+	URI          string `mapstructure:"uri"`
+	ExchangeName string `mapstructure:"exchangeName"`
+	ExchangeType string `mapstructure:"exchangeType"`
+	QueueName    string `mapstructure:"queueName"`
+	RoutingKey   string `mapstructure:"routingKey"`
+	ConsumerTag  string `mapstructure:"consumerTag"`
+}
+
+type PostFeedConfig struct {
+	MaxSize int `mapstructure:"maxSize"`
+}
+
+type CachesConfig struct {
+	SubscribersCache CacheConfig `mapstructure:"subscribers"`
+	PostFeedCache    CacheConfig `mapstructure:"postFeed"`
+}
+
+type CacheConfig struct {
+	URI string        `mapstructure:"uri"`
+	Ttl time.Duration `mapstructure:"ttl"`
 }
 
 func NewConfig(path string) (*Config, error) {

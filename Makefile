@@ -33,61 +33,35 @@ build_backend_client:
 run_backend_client: build_backend_client
 	cd backend && $(BIN_BACKEND_CLIENT)
 
-# собрать образ миграций
-.PHONY: build-img-migrator
-build-img-migrator:
-	docker build \
-		--build-arg=LDFLAGS="$(LDFLAGS)" \
-		-t $(DOCKER_IMG_MIGRATOR) \
-		-f backend/build/migrator/Dockerfile .
-
-# запустить образ миграций
-.PHONY: run-img-migrator
-run-img-migrator: build-img-migrator
-	docker run -d $(DOCKER_IMG_MIGRATOR)
-
-# собрать образ сервис
-.PHONY: build-img
-build-img:
-	docker build \
-		--build-arg=LDFLAGS="$(LDFLAGS)" \
-		-t $(DOCKER_IMG_BACKEND_SERVER) \
-		-f backend/build/server/Dockerfile .
-
-# запустить образ сервиса
-.PHONY: run-img
-run-img: build-img
-	docker run -d $(DOCKER_IMG_BACKEND_SERVER)
-
 # применить миграции Postgres (в ручном режиме)
 .PHONY: migrate
 migrate:
-	goose -dir migrations postgres "postgres://otus:password@localhost:5432/backend" up
+	goose -dir backend/migrations postgres "postgres://otus:password@localhost:5432/backend" up
 
 # откатить миграции Postgres (в ручном режиме)
 .PHONY: migrate-down
 migrate-down:
-	goose -dir migrations postgres "postgres://otus:password@localhost:5432/backend" down
+	goose -dir backend/migrations postgres "postgres://otus:password@localhost:5432/backend" down
 
-# поднять окружение (только БД master)
+# поднять окружение (только БД master, кеш и очередь))
 .PHONY: up-infra
 up-infra:
-	docker compose --env-file deployments/.env -f deployments/docker-compose-db-master.yaml up -d
+	docker compose --env-file deployments/.env -f deployments/docker-compose-db-master.yaml -f deployments/docker-compose-rabbit.yaml -f deployments/docker-compose-redis.yaml up -d
 
-# потушить окружение (только БД master)
+# потушить окружение (только БД master, кеш и очередь))
 .PHONY: down-infra
 down-infra:
-	docker compose --env-file deployments/.env -f deployments/docker-compose-db-master.yaml down
+	docker compose --env-file deployments/.env -f deployments/docker-compose-db-master.yaml -f deployments/docker-compose-rabbit.yaml -f deployments/docker-compose-redis.yaml down
 
-# поднять сервисы и окружение (БД master)
+# поднять сервисы и окружение (БД master, кеш и очередь)
 .PHONY: up
 up:
-	docker compose --env-file deployments/.env -f deployments/docker-compose-db-master.yaml -f deployments/docker-compose.yaml up -d --build
+	docker compose --env-file deployments/.env -f deployments/docker-compose-db-master.yaml -f deployments/docker-compose-rabbit.yaml -f deployments/docker-compose-redis.yaml -f deployments/docker-compose.yaml up -d --build
 
-# потушить сервисы и окружение (БД master)
+# потушить сервисы и окружение (БД master, кеш и очередь)
 .PHONY: down
 down:
-	docker compose --env-file deployments/.env -f deployments/docker-compose-db-master.yaml -f deployments/docker-compose.yaml down
+	docker compose --env-file deployments/.env -f deployments/docker-compose-db-master.yaml -f deployments/docker-compose-rabbit.yaml -f deployments/docker-compose-redis.yaml -f deployments/docker-compose.yaml down
 
 # поднять сервисы и окружение (БД master+мониторинги)
 .PHONY: up-mon

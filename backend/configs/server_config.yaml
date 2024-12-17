@@ -1,6 +1,6 @@
 # Logger config
 logger:
-  level: "INFO"
+  level: "DEBUG"
 # HTTP server config
 httpServer:
   host: ${HTTP_SERVER_HOST}
@@ -25,3 +25,22 @@ timezone: "Europe/Moscow"
 # Auth config
 auth:
   PrivateKey: ${AUTH_PRIVATE_KEY}
+# Queue config
+queue:
+  uri: ${QUEUE_URI}
+  exchangeName: "backend-events"
+  exchangeType: "direct" # direct|fanout|topic|x-custom
+  queueName: "post-feed-queue"
+  routingKey: "post-feed"
+  consumerTag: "backends-consumer"
+# Post feed config
+postFeed:
+  maxSize: 1000 # максимальное количество постов в ленте
+# Caches config (use different db)
+caches:
+  subscribers:
+    uri: ${SUBSCRIBERS_CACHE_URI}
+    ttl: 60m
+  postFeed:
+    uri: ${POST_FEED_CACHE_URI}
+    ttl: 60m

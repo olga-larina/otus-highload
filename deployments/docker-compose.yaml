@@ -26,6 +26,9 @@ services:
       - HTTP_SERVER_HOST=${HTTP_SERVER_HOST}
       - HTTP_SERVER_PORT=${HTTP_SERVER_PORT}
       - AUTH_PRIVATE_KEY=${AUTH_PRIVATE_KEY}
+      - QUEUE_URI=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}:${RABBITMQ_PORT}/
+      - SUBSCRIBERS_CACHE_URI=redis://redis:6379/0?protocol=3&db=0
+      - POST_FEED_CACHE_URI=redis://redis:6379/1?protocol=3&db=1
     ports:
       - "8080:8080"
     volumes:
@@ -35,4 +38,6 @@ services:
       backend-migrator:
         condition: service_completed_successfully
       dbMaster:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy

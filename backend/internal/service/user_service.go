@@ -31,11 +31,6 @@ func (s *UserService) GetUserById(ctx context.Context, id *model.UserId) (*model
 	return s.storage.GetUserById(ctx, id)
 }
 
-func (s *UserService) GetMe(ctx context.Context) (*model.User, error) {
-	userId := ctx.Value(model.UserIdContextKey).(string)
-	return s.GetUserById(ctx, &userId)
-}
-
 func (s *UserService) RegisterUser(ctx context.Context, registerBody *model.PostUserRegisterJSONRequestBody) (*model.UserId, error) {
 	passwordHash, err := s.passwordHasher.HashPassword(ctx, *registerBody.Password)
 	if err != nil {

@@ -2,10 +2,10 @@ package sqlstorage
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
-	_ "github.com/jackc/pgx/v5/stdlib" // for postgres
 	"github.com/olga-larina/otus-highload/backend/internal/model"
 )
 
@@ -45,7 +45,7 @@ func (s *UserStorage) GetUserById(ctx context.Context, id *model.UserId) (*model
 	var user model.User
 	err := row.Scan(&user.Id, &user.FirstName, &user.SecondName, &user.City, &user.Gender, &user.Birthdate, &user.Biography)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, model.ErrUserNotFound
 		}
 		return nil, err

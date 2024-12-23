@@ -46,7 +46,7 @@ RETURNING user_id
 `
 
 func (s *FriendStorage) DeleteFriend(ctx context.Context, userId *model.UserId, friendId *model.UserId) error {
-	row := s.db.QueryRow(ctx, deleteFriendSQL, &userId, &friendId)
+	row := s.db.WriteReturn(ctx, deleteFriendSQL, &userId, &friendId)
 
 	var deletedUserId model.UserId
 	err := row.Scan(&deletedUserId)

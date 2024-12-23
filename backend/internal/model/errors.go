@@ -12,4 +12,5 @@ var (
 	ErrPostNotFound        = errors.New("post not found")
 	ErrPostFeedLenNotValid = errors.New("post feed length not valid")
 	ErrNotValidCache       = errors.New("cache not valid")
+	ErrNotValidDialog      = errors.New("dialog not valid")
 )

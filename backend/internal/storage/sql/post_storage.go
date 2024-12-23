@@ -26,7 +26,7 @@ RETURNING id, content, user_id, create_time, update_time
 `
 
 func (s *PostStorage) CreatePost(ctx context.Context, post *model.Post) (*model.PostExtended, error) {
-	row := s.db.QueryRow(ctx, createPostSQL, &post.Id, &post.Text, &post.AuthorUserId)
+	row := s.db.WriteReturn(ctx, createPostSQL, &post.Id, &post.Text, &post.AuthorUserId)
 
 	var postCreated model.PostExtended
 	err := row.Scan(&postCreated.Id, &postCreated.Text, &postCreated.AuthorUserId, &postCreated.CreateTime, &postCreated.UpdateTime)
@@ -50,7 +50,7 @@ RETURNING id, content, user_id, create_time, update_time
 `
 
 func (s *PostStorage) UpdatePost(ctx context.Context, post *model.Post) (*model.PostExtended, error) {
-	row := s.db.QueryRow(ctx, updatePostSQL, &post.Id, &post.AuthorUserId, &post.Text)
+	row := s.db.WriteReturn(ctx, updatePostSQL, &post.Id, &post.AuthorUserId, &post.Text)
 
 	var postUpdated model.PostExtended
 	err := row.Scan(&postUpdated.Id, &postUpdated.Text, &postUpdated.AuthorUserId, &postUpdated.CreateTime, &postUpdated.UpdateTime)
@@ -69,7 +69,7 @@ RETURNING id
 `
 
 func (s *PostStorage) DeletePost(ctx context.Context, postId *model.PostId, userId *model.UserId) error {
-	row := s.db.QueryRow(ctx, deletePostByIdSQL, &postId, &userId)
+	row := s.db.WriteReturn(ctx, deletePostByIdSQL, &postId, &userId)
 
 	var deletedPostId model.PostId
 	err := row.Scan(&deletedPostId)

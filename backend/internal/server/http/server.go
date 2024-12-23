@@ -15,6 +15,7 @@ type Server struct {
 	friendService   FriendService
 	postService     PostService
 	postFeedService PostFeedService
+	dialogService   DialogService
 }
 
 type AuthService interface {
@@ -47,6 +48,11 @@ type PostFeedService interface {
 	GetUserPosts(ctx context.Context, userId *model.UserId, limit int, offset int) ([]*model.PostExtended, error)
 }
 
+type DialogService interface {
+	CreateMessage(ctx context.Context, fromUserId *model.UserId, toUserId *model.UserId, postText *model.DialogMessageText) (*model.DialogMessageExtended, error)
+	GetMessagesBetween(ctx context.Context, firstUserId *model.UserId, secondUserId *model.UserId) ([]*model.DialogMessageExtended, error)
+}
+
 func NewServer(
 	authService AuthService,
 	loginService LoginService,
@@ -54,6 +60,7 @@ func NewServer(
 	friendService FriendService,
 	postService PostService,
 	postFeedService PostFeedService,
+	dialogService DialogService,
 ) *Server {
 	return &Server{
 		authService:     authService,
@@ -62,6 +69,7 @@ func NewServer(
 		friendService:   friendService,
 		postService:     postService,
 		postFeedService: postFeedService,
+		dialogService:   dialogService,
 	}
 }
 
@@ -318,10 +326,40 @@ func (s *Server) GetPostFeed(ctx context.Context, request GetPostFeedRequestObje
 
 // (GET /dialog/{user_id}/list)
 func (s *Server) GetDialogUserIdList(ctx context.Context, request GetDialogUserIdListRequestObject) (GetDialogUserIdListResponseObject, error) {
-	return GetDialogUserIdList400Response{}, nil
+	userId, err := s.authService.GetUserId(ctx)
+	if err != nil {
+		logger.Error(ctx, err, "not authorized")
+		return GetDialogUserIdList401Response{}, nil
+	}
+	messages, err := s.dialogService.GetMessagesBetween(ctx, &userId, &request.UserId)
+	if err != nil {
+		response := GetDialogUserIdList500JSONResponse{}
+		response.Body.Message = err.Error()
+		return response, nil
+	}
+	response := GetDialogUserIdList200JSONResponse{}
+	for _, message := range messages {
+		response = append(response, message.DialogMessage)
+	}
+	return response, nil
 }
 
 // (POST /dialog/{user_id}/send)
 func (s *Server) PostDialogUserIdSend(ctx context.Context, request PostDialogUserIdSendRequestObject) (PostDialogUserIdSendResponseObject, error) {
-	return PostDialogUserIdSend400Response{}, nil
+	userId, err := s.authService.GetUserId(ctx)
+	if err != nil {
+		logger.Error(ctx, err, "not authorized")
+		return PostDialogUserIdSend401Response{}, nil
+	}
+	_, err = s.dialogService.CreateMessage(ctx, &userId, &request.UserId, &request.Body.Text)
+	if err != nil {
+		if errors.Is(err, model.ErrUserNotFound) {
+			logger.Error(ctx, err, "failed to create dialog message")
+			return PostDialogUserIdSend404Response{}, nil
+		}
+		response := PostDialogUserIdSend500JSONResponse{}
+		response.Body.Message = err.Error()
+		return response, nil
+	}
+	return PostDialogUserIdSend200Response{}, nil
 }

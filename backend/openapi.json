@@ -640,6 +640,9 @@
             "401": {
               "$ref": "#/components/responses/401"
             },
+            "404": {
+              "description": "Пользователь не найден"
+            },
             "500": {
               "$ref": "#/components/responses/5xx"
             },

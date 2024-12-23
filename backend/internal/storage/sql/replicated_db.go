@@ -60,6 +60,10 @@ func (r *ReplicatedDb) Write(ctx context.Context, sql string, args ...any) (pgco
 	return r.connWrite().Exec(ctx, sql, args...)
 }
 
+func (r *ReplicatedDb) WriteReturn(ctx context.Context, sql string, args ...any) pgx.Row {
+	return r.connWrite().QueryRow(ctx, sql, args...)
+}
+
 func (r *ReplicatedDb) QueryRows(ctx context.Context, sql string, args ...any) (pgx.Rows, error) {
 	return r.connRead().Query(ctx, sql, args...)
 }

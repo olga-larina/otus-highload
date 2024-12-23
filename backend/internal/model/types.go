@@ -12,3 +12,12 @@ type PostExtended struct {
 	CreateTime time.Time
 	UpdateTime time.Time
 }
+
+type DialogId = string
+
+type DialogMessageExtended struct {
+	DialogMessage
+	Id       string
+	DialogId DialogId
+	SendTime time.Time
+}

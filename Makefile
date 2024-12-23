@@ -43,12 +43,12 @@ migrate:
 migrate-down:
 	goose -dir backend/migrations postgres "postgres://otus:password@localhost:5432/backend" down
 
-# поднять окружение (только БД master, кеш и очередь))
+# поднять окружение (только БД master, кеш и очередь)
 .PHONY: up-infra
 up-infra:
 	docker compose --env-file deployments/.env -f deployments/docker-compose-db-master.yaml -f deployments/docker-compose-rabbit.yaml -f deployments/docker-compose-redis.yaml up -d
 
-# потушить окружение (только БД master, кеш и очередь))
+# потушить окружение (только БД master, кеш и очередь)
 .PHONY: down-infra
 down-infra:
 	docker compose --env-file deployments/.env -f deployments/docker-compose-db-master.yaml -f deployments/docker-compose-rabbit.yaml -f deployments/docker-compose-redis.yaml down
@@ -63,22 +63,32 @@ up:
 down:
 	docker compose --env-file deployments/.env -f deployments/docker-compose-db-master.yaml -f deployments/docker-compose-rabbit.yaml -f deployments/docker-compose-redis.yaml -f deployments/docker-compose.yaml down
 
-# поднять сервисы и окружение (БД master+мониторинги)
+# поднять сервисы и окружение с мониторингами (БД master, кеш и очередь+мониторинги)
 .PHONY: up-mon
 up-mon:
-	docker compose --env-file deployments/.env -f deployments/docker-compose-db-master.yaml -f deployments/docker-compose-monitoring.yaml -f deployments/docker-compose.yaml up -d --build
+	docker compose --env-file deployments/.env -f deployments/docker-compose-db-master.yaml -f deployments/docker-compose-rabbit.yaml -f deployments/docker-compose-redis.yaml -f deployments/docker-compose-monitoring.yaml -f deployments/docker-compose.yaml up -d --build
 
-# потушить сервисы и окружение (БД master+мониторинги)
+# потушить сервисы и окружение с мониторингами (БД master, кеш и очередь+мониторинги)
 .PHONY: down-mon
 down-mon:
-	docker compose --env-file deployments/.env -f deployments/docker-compose-db-master.yaml -f deployments/docker-compose-monitoring.yaml -f deployments/docker-compose.yaml down
+	docker compose --env-file deployments/.env -f deployments/docker-compose-db-master.yaml -f deployments/docker-compose-rabbit.yaml -f deployments/docker-compose-redis.yaml -f deployments/docker-compose-monitoring.yaml -f deployments/docker-compose.yaml down
 
-# поднять сервисы и окружение (БД master и реплики+мониторинги)
+# поднять сервисы и окружение (БД master и реплики, кеш и очередь+мониторинги)
 .PHONY: up-replicated
 up-replicated:
-	docker compose --env-file deployments/.env_replicated -f deployments/docker-compose-db-master.yaml -f deployments/docker-compose-db-replicas.yaml -f deployments/docker-compose-monitoring.yaml -f deployments/docker-compose.yaml up -d --build
+	docker compose --env-file deployments/.env --env-file deployments/.env_replicated -f deployments/docker-compose-db-master.yaml -f deployments/docker-compose-db-replicas.yaml -f deployments/docker-compose-rabbit.yaml -f deployments/docker-compose-redis.yaml -f deployments/docker-compose-monitoring.yaml -f deployments/docker-compose.yaml up -d --build
 
-# потушить сервисы и окружение (БД master и реплики+мониторинги)
+# потушить сервисы и окружение (БД master и реплики, кеш и очередь+мониторинги)
 .PHONY: down-replicated
 down-replicated:
-	docker compose --env-file deployments/.env_replicated -f deployments/docker-compose-db-master.yaml -f deployments/docker-compose-db-replicas.yaml -f deployments/docker-compose-monitoring.yaml -f deployments/docker-compose.yaml down
+	docker compose --env-file deployments/.env --env-file deployments/.env_replicated -f deployments/docker-compose-db-master.yaml -f deployments/docker-compose-db-replicas.yaml -f deployments/docker-compose-rabbit.yaml -f deployments/docker-compose-redis.yaml -f deployments/docker-compose-monitoring.yaml -f deployments/docker-compose.yaml down
+
+# поднять сервисы и окружение (citus (1 master + 2 workers + 1 manager), кеш и очередь)
+.PHONY: up-sharded
+up-sharded:
+	docker compose --env-file deployments/.env -f deployments/docker-compose-db-sharded.yaml -f deployments/docker-compose-rabbit.yaml -f deployments/docker-compose-redis.yaml -f deployments/docker-compose.yaml up -d --build
+
+# потушить сервисы и окружение (citus (1 master + 2 workers + 1 manager), кеш и очередь)
+.PHONY: down-sharded
+down-sharded:
+	docker compose --env-file deployments/.env -f deployments/docker-compose-db-sharded.yaml -f deployments/docker-compose-rabbit.yaml -f deployments/docker-compose-redis.yaml -f deployments/docker-compose.yaml down

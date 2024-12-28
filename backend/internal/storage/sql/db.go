@@ -14,6 +14,7 @@ const (
 
 type Db interface {
 	Write(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
+	WriteReturn(ctx context.Context, sql string, args ...any) pgx.Row
 	QueryRows(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
 	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
 }

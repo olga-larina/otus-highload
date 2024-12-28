@@ -25,6 +25,7 @@ import (
 	"github.com/olga-larina/otus-highload/backend/internal/service/cache/converter"
 	redis_cache "github.com/olga-larina/otus-highload/backend/internal/service/cache/redis"
 	"github.com/olga-larina/otus-highload/backend/internal/service/feed"
+	"github.com/olga-larina/otus-highload/backend/internal/service/shard"
 	sqlstorage "github.com/olga-larina/otus-highload/backend/internal/storage/sql"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/cors"
@@ -90,6 +91,7 @@ func main() {
 	friendStorage := sqlstorage.NewFriendStorage(db)
 	postStorage := sqlstorage.NewPostStorage(db)
 	postFeedStorage := sqlstorage.NewPostFeedStorage(db)
+	dialogStorage := sqlstorage.NewDialogStorage(db)
 
 	// queue
 	queue := rabbit.NewQueue(
@@ -153,6 +155,9 @@ func main() {
 	// post feed notifications
 	postFeedNotificationService := feed.NewPostFeedNotificationService(publisher)
 
+	// dialog id obtainer
+	dialogIdObtainer := shard.NewDialogIdObtainer()
+
 	// services
 	authenticator, err := auth.NewFakeAuthenticator(config.Auth.PrivateKey)
 	if err != nil {
@@ -166,6 +171,7 @@ func main() {
 	friendService := service.NewFriendService(friendStorage, postFeedNotificationService)
 	postService := service.NewPostService(postStorage, postFeedNotificationService)
 	postFeedService := feed.NewPostFeedService(postFeedCacher, config.PostFeed.MaxSize)
+	dialogService := service.NewDialogService(dialogStorage, dialogIdObtainer)
 
 	// http server
 	httpServerAddr := fmt.Sprintf("%s:%s", config.HTTPServer.Host, config.HTTPServer.Port)
@@ -176,6 +182,7 @@ func main() {
 		friendService,
 		postService,
 		postFeedService,
+		dialogService,
 	)
 	serverHandler := internalhttp.NewStrictHandler(
 		server,

@@ -135,6 +135,30 @@ func main() {
 		return
 	}
 
+	// добавление сообщения от пользователя 1 пользователю 2
+	err = createDialogMessage(ctx, c, addTokenFunc, friendId)
+	if err != nil {
+		return
+	}
+
+	// добавление сообщения от пользователя 2 пользователю 1
+	err = createDialogMessage(ctx, c, addTokenFriendFunc, userId)
+	if err != nil {
+		return
+	}
+
+	// получение диалога пользователем 1
+	err = getDialog(ctx, c, addTokenFunc, friendId)
+	if err != nil {
+		return
+	}
+
+	// получение диалога пользователем 2
+	err = getDialog(ctx, c, addTokenFriendFunc, userId)
+	if err != nil {
+		return
+	}
+
 	// --------- Проверка некорректных запросов
 
 	// логин с некорректным паролем
@@ -170,10 +194,16 @@ func main() {
 	// получение ленты без токена
 	getFeed(ctx, c, withoutTokenFunc, 100, 0)
 
+	// добавление сообщения без токена
+	createDialogMessage(ctx, c, withoutTokenFunc, userId)
+
+	// получение диалога без токена
+	getDialog(ctx, c, withoutTokenFunc, friendId)
+
 	logger.Info(ctx, "successfully finished")
 }
 
-func userRegister(ctx context.Context, c *clienthttp.ClientWithResponses, password string) (string, error) {
+func userRegister(ctx context.Context, c *clienthttp.ClientWithResponses, password string) (model.UserId, error) {
 	userRegisterResponse, err := c.PostUserRegisterWithResponse(ctx, model.PostUserRegisterJSONRequestBody{
 		FirstName:  ptrString("Имя"),
 		SecondName: ptrString("Фамилия"),
@@ -367,6 +397,41 @@ func getFeed(ctx context.Context, c *clienthttp.ClientWithResponses, addTokenFun
 		return errors.New("failed getting feed")
 	}
 	logger.Info(ctx, "feed obtained", "feed", getFeedResponse.JSON200)
+
+	return nil
+}
+
+func createDialogMessage(ctx context.Context, c *clienthttp.ClientWithResponses, addTokenFunc clienthttp.RequestEditorFn, toUserId model.UserId) error {
+	createDialogMessageResponse, err := c.PostDialogUserIdSendWithResponse(
+		ctx,
+		toUserId,
+		model.PostDialogUserIdSendJSONRequestBody{Text: fmt.Sprintf("test message %v", time.Now())},
+		addTokenFunc,
+	)
+	if err != nil {
+		logger.Error(ctx, err, "failed creating dialog message")
+		return err
+	}
+	if createDialogMessageResponse.StatusCode() != 200 {
+		logger.Warn(ctx, "failed creating dialog message", "response", string(createDialogMessageResponse.Body), "status", createDialogMessageResponse.StatusCode())
+		return errors.New("failed creating dialog message")
+	}
+	logger.Info(ctx, "dialog message created")
+
+	return nil
+}
+
+func getDialog(ctx context.Context, c *clienthttp.ClientWithResponses, addTokenFunc clienthttp.RequestEditorFn, withUserId model.UserId) error {
+	getDialogResponse, err := c.GetDialogUserIdListWithResponse(ctx, withUserId, addTokenFunc)
+	if err != nil {
+		logger.Error(ctx, err, "failed getting dialog")
+		return err
+	}
+	if getDialogResponse.StatusCode() != 200 {
+		logger.Warn(ctx, "failed getting dialog", "response", string(getDialogResponse.Body), "status", getDialogResponse.StatusCode())
+		return errors.New("failed getting dialog")
+	}
+	logger.Info(ctx, "dialog obtained", "dialog", getDialogResponse.JSON200)
 
 	return nil
 }

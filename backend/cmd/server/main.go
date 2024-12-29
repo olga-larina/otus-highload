@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/getkin/kin-openapi/openapi3filter"
-	"github.com/gorilla/mux"
 	middleware "github.com/oapi-codegen/nethttp-middleware"
+	"github.com/pckilgore/combuuid"
 	"github.com/redis/go-redis/v9"
 
 	"github.com/olga-larina/otus-highload/backend/internal/logger"
@@ -27,7 +27,6 @@ import (
 	"github.com/olga-larina/otus-highload/backend/internal/service/feed"
 	"github.com/olga-larina/otus-highload/backend/internal/service/shard"
 	sqlstorage "github.com/olga-larina/otus-highload/backend/internal/storage/sql"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/cors"
 )
 
@@ -38,6 +37,8 @@ func init() {
 }
 
 func main() {
+	serviceId := combuuid.NewUuid().String()
+
 	flag.Parse()
 
 	config, err := NewConfig(configFile)
@@ -98,17 +99,14 @@ func main() {
 		config.Queue.URI,
 		config.Queue.ExchangeName,
 		config.Queue.ExchangeType,
-		config.Queue.QueueName,
-		config.Queue.RoutingKey,
 	)
-	consumer := queue.NewConsumer(config.Queue.ConsumerTag)
 	if err := queue.Start(ctx); err != nil {
 		logger.Error(ctx, err, "queue failed to start")
 		return
 	}
 	publisher := queue.NewPublisher()
-	if err := queue.Start(ctx); err != nil {
-		logger.Error(ctx, err, "queue failed to start")
+	if err := publisher.Start(ctx); err != nil {
+		logger.Error(ctx, err, "publisher failed to start")
 		return
 	}
 
@@ -144,7 +142,12 @@ func main() {
 	postFeedUpdater := feed.NewPostFeedUpdater(
 		postFeedCacher,
 		subscriberCacher,
-		consumer,
+		queue,
+		config.Queue.PostFeedCacheQueue.QueueName,
+		config.Queue.PostFeedCacheQueue.ConsumerTag,
+		config.Queue.PostFeedCacheQueue.RoutingKey,
+		config.Queue.PostFeedUserQueue.RoutingKey,
+		serviceId,
 	)
 
 	if err := postFeedUpdater.Start(ctx); err != nil {
@@ -153,7 +156,16 @@ func main() {
 	}
 
 	// post feed notifications
-	postFeedNotificationService := feed.NewPostFeedNotificationService(publisher)
+	postFeedNotificationService := feed.NewPostFeedNotificationService(publisher, config.Queue.PostFeedCacheQueue.RoutingKey)
+
+	// post feed user subscriber
+	postFeedUserSubscriber := feed.NewPostFeedUserSubscriber(
+		queue,
+		config.Queue.PostFeedUserQueue.QueueName,
+		config.Queue.PostFeedUserQueue.ConsumerTag,
+		config.Queue.PostFeedUserQueue.RoutingKey,
+		serviceId,
+	)
 
 	// dialog id obtainer
 	dialogIdObtainer := shard.NewDialogIdObtainer()
@@ -173,6 +185,9 @@ func main() {
 	postFeedService := feed.NewPostFeedService(postFeedCacher, config.PostFeed.MaxSize)
 	dialogService := service.NewDialogService(dialogStorage, dialogIdObtainer)
 
+	// authentication function
+	authFunc := internalhttp.NewAuthenticator(authenticator, authenticator)
+
 	// http server
 	httpServerAddr := fmt.Sprintf("%s:%s", config.HTTPServer.Host, config.HTTPServer.Port)
 	server := internalhttp.NewServer(
@@ -190,22 +205,12 @@ func main() {
 		// []internalhttp.StrictMiddlewareFunc{internalhttp.StrictLoggingMiddleware},
 	)
 
-	router := mux.NewRouter()
-	// роут с метриками
-	router.Handle("/metrics", promhttp.Handler()).Methods("GET")
-	// роут с инвалидацией кеша
-	router.HandleFunc("/internal/cache/invalidate", func() func(http.ResponseWriter, *http.Request) {
-		return func(w http.ResponseWriter, r *http.Request) {
-			err := postFeedNotificationService.NotifyInvalidateAll(ctx)
-			if err != nil {
-				logger.Error(ctx, err, "failed notifying cache invalidation")
-				w.WriteHeader(http.StatusInternalServerError)
-			} else {
-				logger.Info(ctx, "succeeded notifying cache invalidation")
-				w.WriteHeader(http.StatusOK)
-			}
-		}
-	}()).Methods("POST")
+	router := internalhttp.NewManualRouter(
+		postFeedNotificationService,
+		postFeedUserSubscriber,
+		authFunc,
+		authService,
+	)
 
 	internalhttp.HandlerWithOptions(
 		serverHandler,
@@ -229,12 +234,12 @@ func main() {
 	validator := middleware.OapiRequestValidatorWithOptions(spec,
 		&middleware.Options{
 			Options: openapi3filter.Options{
-				AuthenticationFunc: internalhttp.NewAuthenticator(authenticator, authenticator),
+				AuthenticationFunc: authFunc,
 			},
 		})
 	router.Use(internalhttp.LoggingMiddleware)
 	router.Use(func(next http.Handler) http.Handler {
-		return internalhttp.SkipValidatorForMetricsAndInternal(validator, next)
+		return internalhttp.SkipValidatorForManualRoutes(validator, next)
 	})
 
 	c := cors.New(cors.Options{
@@ -268,12 +273,12 @@ func main() {
 
 	<-ctx.Done()
 
-	if err := consumer.Stop(ctx); err != nil {
-		logger.Error(ctx, err, "failed to stop consumer")
-	}
-
 	if err := postFeedUpdater.Stop(ctx); err != nil {
 		logger.Error(ctx, err, "failed to stop postFeedUpdater")
+	}
+
+	if err := publisher.Stop(ctx); err != nil {
+		logger.Error(ctx, err, "failed to stop postFeed publisher")
 	}
 
 	if err := queue.Stop(ctx); err != nil {

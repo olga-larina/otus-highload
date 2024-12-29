@@ -3,16 +3,20 @@ package feed
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/olga-larina/otus-highload/backend/internal/logger"
 	"github.com/olga-larina/otus-highload/backend/internal/model"
+	"github.com/olga-larina/otus-highload/backend/internal/queue"
 )
 
 type PostFeedUpdater struct {
-	postFeedCache    PostFeedCacher
-	subscribersCache SubscribersCacher
-	queue            QueueConsumer
-	done             chan struct{}
+	postFeedCache        PostFeedCacher
+	subscribersCache     SubscribersCacher
+	updatesConsumer      queue.QueueConsumer // получение событий об обновлении ленты (для обновления кеша)
+	userPublisher        queue.QueueSender   // рассылка событий об обновлениях лент в каналы пользователей
+	userUpdateRoutingKey string              // шаблон routingKey для рассылки событий об обновлениях лент
+	done                 chan struct{}
 }
 
 type PostFeedCacher interface {
@@ -26,27 +30,44 @@ type SubscribersCacher interface {
 	GetOrLoad(ctx context.Context, userId *model.UserId) ([]model.UserId, error)
 }
 
-type QueueConsumer interface {
-	ReceiveData(ctx context.Context) (<-chan []byte, error)
-}
-
 func NewPostFeedUpdater(
 	postFeedCache PostFeedCacher,
 	subscribersCache SubscribersCacher,
-	queue QueueConsumer,
+	queue queue.Queue,
+	postFeedCacheQueueName string,
+	postFeedCacheConsumerTag string,
+	postFeedCacheConsumerRoutingKey string,
+	postFeedUserUpdateRoutingKey string,
+	serviceId string,
 ) *PostFeedUpdater {
 	return &PostFeedUpdater{
 		postFeedCache:    postFeedCache,
 		subscribersCache: subscribersCache,
-		queue:            queue,
-		done:             make(chan struct{}),
+		updatesConsumer: queue.NewConsumer(
+			postFeedCacheQueueName,
+			fmt.Sprintf(postFeedCacheConsumerTag, serviceId),
+			postFeedCacheConsumerRoutingKey,
+		),
+		userPublisher:        queue.NewPublisher(),
+		userUpdateRoutingKey: postFeedUserUpdateRoutingKey,
+		done:                 make(chan struct{}),
 	}
 }
 
 func (s *PostFeedUpdater) Start(ctx context.Context) error {
 	logger.Info(ctx, "starting postFeedUpdater")
 
-	err := s.processEvents(ctx)
+	err := s.updatesConsumer.Start(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = s.userPublisher.Start(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = s.processEvents(ctx)
 	if err != nil {
 		return err
 	}
@@ -57,6 +78,16 @@ func (s *PostFeedUpdater) Start(ctx context.Context) error {
 
 func (s *PostFeedUpdater) Stop(ctx context.Context) error {
 	logger.Info(ctx, "stopping postFeedUpdater")
+
+	err := s.userPublisher.Stop(ctx)
+	if err != nil {
+		logger.Error(ctx, err, "failed to stop postFeedUpdater publisher")
+	}
+
+	err = s.updatesConsumer.Stop(ctx)
+	if err != nil {
+		logger.Error(ctx, err, "failed to stop postFeedUpdater consumer")
+	}
 
 	<-ctx.Done()
 	<-s.done
@@ -69,7 +100,7 @@ func (s *PostFeedUpdater) Stop(ctx context.Context) error {
  * Получение событий из очереди.
  */
 func (s *PostFeedUpdater) processEvents(ctx context.Context) error {
-	data, err := s.queue.ReceiveData(ctx)
+	data, err := s.updatesConsumer.ReceiveData(ctx)
 	if err != nil {
 		defer close(s.done)
 		return err
@@ -154,10 +185,12 @@ func (s *PostFeedUpdater) processUpdateFriend(ctx context.Context, userId model.
 		return err
 	}
 	// перезагружаем ленту пользователя, т.к. у него добавился новый друг, за постами которого он следит
-	_, err = s.postFeedCache.Load(ctx, &userId)
+	posts, err := s.postFeedCache.Load(ctx, &userId)
 	if err != nil {
 		logger.Error(ctx, err, "failed loading postFeed", "userId", userId)
+		return err
 	}
+	s.sendPostFeedUpdate(ctx, userId, posts)
 	return err
 }
 
@@ -181,13 +214,43 @@ func (s *PostFeedUpdater) processUpdateFeed(ctx context.Context, userId model.Us
 		return err
 	}
 	// у каждого подписчика обновляем ленту; если у кого-то не получилось, то не прекращаем
+	// также пытаемся отправить обновление ленты в канал каждого пользователя
 	var errSubscriber error
+	var posts []model.PostExtended
 	for _, subscriberId := range subscribers {
-		_, errSubscriber = s.postFeedCache.Load(ctx, &subscriberId)
+		posts, errSubscriber = s.postFeedCache.Load(ctx, &subscriberId)
 		if errSubscriber != nil {
 			logger.Error(ctx, err, "failed loading postFeed", "userId", subscriberId)
 			err = errSubscriber
+		} else {
+			s.sendPostFeedUpdate(ctx, subscriberId, posts)
 		}
 	}
 	return err
+}
+
+func (s *PostFeedUpdater) sendPostFeedUpdate(ctx context.Context, userId model.UserId, posts []model.PostExtended) {
+	notification := model.UserPostFeedNotification{
+		Posts: posts,
+	}
+	notificationStr, err := json.Marshal(notification)
+	if err != nil {
+		logger.Error(
+			ctx, err, "failed notifying",
+			"stage", "marshal",
+			"userId", userId,
+			"event", &notification,
+		)
+		return
+	}
+	err = s.userPublisher.SendData(ctx, fmt.Sprintf(s.userUpdateRoutingKey, userId), notificationStr)
+	if err != nil {
+		logger.Error(
+			ctx, err, "failed notifying",
+			"stage", "send",
+			"userId", userId,
+			"event", &notification,
+		)
+	}
+	logger.Debug(ctx, "sent user notification", "userId", userId, "notification", notification)
 }

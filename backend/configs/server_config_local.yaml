@@ -37,9 +37,14 @@ queue:
   uri: amqp://rmuser:rmpassword@localhost:5672/
   exchangeName: "backend-events"
   exchangeType: "direct" # direct|fanout|topic|x-custom
-  queueName: "post-feed-queue"
-  routingKey: "post-feed"
-  consumerTag: "backends-consumer"
+  postFeedCacheQueue:
+    queueName: "post-feed-cache-queue" # общая очередь для равномерного распределения нагрузки
+    routingKey: "post-feed-cache"
+    consumerTag: "backend-consumer-%v" # разный тег для каждого экземпляра
+  postFeedUserQueue:
+    queueName: "post-feed-%v-queue-%v" # очередь для конкретного пользователя и конкретного экземпляра
+    routingKey: "post-feed-%v" # роутинг по конкретному пользователю
+    consumerTag: "backend-consumer-%v-%v" # разный тег для каждого экземпляра и пользователя
 # Post feed config
 postFeed:
   maxSize: 1000 # максимальное количество постов в ленте

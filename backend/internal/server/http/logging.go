@@ -51,8 +51,14 @@ func StrictLoggingMiddleware(f nethttp.StrictHTTPHandlerFunc, operationID string
 func LoggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		startTime := time.Now()
-		rec := statusRecorder{w, 200}
-		next.ServeHTTP(&rec, r)
+		var status int
+		if isWebSocketRequest(r) {
+			next.ServeHTTP(w, r)
+		} else {
+			rec := statusRecorder{w, 200}
+			next.ServeHTTP(&rec, r)
+			status = rec.status
+		}
 		elapsed := time.Since(startTime)
 
 		logger.Info(r.Context(), "http request",
@@ -61,9 +67,16 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 			"method", r.Method,
 			"path", r.URL.Path,
 			"version", r.Proto,
-			"statusCode", rec.status,
+			"statusCode", status,
 			"latency", elapsed.Milliseconds(),
 			"userAgent", r.UserAgent(),
 		)
 	})
+}
+
+func isWebSocketRequest(r *http.Request) bool {
+	return r.Header.Get("Upgrade") == "websocket" &&
+		r.Header.Get("Connection") == "Upgrade" &&
+		r.Header.Get("Sec-WebSocket-Key") != "" &&
+		r.Header.Get("Sec-WebSocket-Version") == "13"
 }

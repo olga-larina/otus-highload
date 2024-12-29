@@ -22,6 +22,10 @@ type TokenService interface {
 	ExtractUserId(t jwt.Token) (string, error)
 }
 
+const (
+	SECURITY_SCHEME = "bearerAuth"
+)
+
 var (
 	ErrNoAuthHeader      = errors.New("authorization header is missing")
 	ErrInvalidAuthHeader = errors.New("authorization header is malformed")
@@ -41,8 +45,8 @@ func NewAuthenticator(v JWSValidator, t TokenService) openapi3filter.Authenticat
 // sure that the claims provided by the JWT match the scopes as required in the API.
 func Authenticate(ctx context.Context, input *openapi3filter.AuthenticationInput, v JWSValidator, t TokenService) error {
 	// Our security scheme is named BearerAuth, ensure this is the case
-	if input.SecuritySchemeName != "bearerAuth" {
-		return fmt.Errorf("security scheme %s != 'bearerAuth'", input.SecuritySchemeName)
+	if input.SecuritySchemeName != SECURITY_SCHEME {
+		return fmt.Errorf("security scheme %s != '%s'", input.SecuritySchemeName, SECURITY_SCHEME)
 	}
 
 	// Now, we need to get the JWS from the request, to match the request expectations

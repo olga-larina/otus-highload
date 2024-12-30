@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/gorilla/websocket"
 	clienthttp "github.com/olga-larina/otus-highload/backend/internal/client/http"
 	"github.com/olga-larina/otus-highload/backend/internal/logger"
 	"github.com/olga-larina/otus-highload/backend/internal/model"
@@ -57,6 +58,12 @@ func main() {
 		return nil
 	}
 
+	// подписка на ленту (web socket)
+	postFeedConn, err := postFeedWebSocket(ctx, token)
+	if err != nil {
+		return
+	}
+
 	// получение пользователя по ID
 	err = getUser(ctx, c, addTokenFunc, userId)
 	if err != nil {
@@ -99,17 +106,23 @@ func main() {
 		return nil
 	}
 
+	time.Sleep(2 * time.Second) // задержка для ленты постов
+
 	// добавление поста друга
 	postId, err := createPost(ctx, c, addTokenFriendFunc)
 	if err != nil {
 		return
 	}
 
+	time.Sleep(2 * time.Second) // задержка для ленты постов
+
 	// обновление поста друга
 	err = updatePost(ctx, c, addTokenFriendFunc, postId)
 	if err != nil {
 		return
 	}
+
+	time.Sleep(2 * time.Second) // задержка для ленты постов
 
 	// получение поста друга
 	err = getPost(ctx, c, addTokenFriendFunc, postId)
@@ -129,11 +142,15 @@ func main() {
 		return
 	}
 
+	time.Sleep(2 * time.Second) // задержка для ленты постов
+
 	// удаление друга
 	err = deleteFriend(ctx, c, addTokenFunc, friendId)
 	if err != nil {
 		return
 	}
+
+	time.Sleep(2 * time.Second) // задержка для ленты постов
 
 	// добавление сообщения от пользователя 1 пользователю 2
 	err = createDialogMessage(ctx, c, addTokenFunc, friendId)
@@ -157,6 +174,16 @@ func main() {
 	err = getDialog(ctx, c, addTokenFriendFunc, userId)
 	if err != nil {
 		return
+	}
+
+	// закрытие подписки на ленту (web socket)
+	err = postFeedConn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "Goodbye"))
+	if err != nil {
+		logger.Error(ctx, err, "failed sending message for closing web socket connection")
+	}
+	err = postFeedConn.Close()
+	if err != nil {
+		logger.Error(ctx, err, "failed closing web socket connection")
 	}
 
 	// --------- Проверка некорректных запросов
@@ -201,6 +228,36 @@ func main() {
 	getDialog(ctx, c, withoutTokenFunc, friendId)
 
 	logger.Info(ctx, "successfully finished")
+}
+
+func postFeedWebSocket(ctx context.Context, token string) (*websocket.Conn, error) {
+	headers := http.Header{}
+	headers.Add("Authorization", "Bearer "+token)
+	conn, _, err := websocket.DefaultDialer.Dial("ws://localhost:8080/post/feed/posted", headers)
+	if err != nil {
+		logger.Error(ctx, err, "failed connecting to WebSocket")
+		return nil, err
+	}
+
+	go func() {
+		for {
+			messageType, message, err := conn.ReadMessage()
+			if err != nil {
+				logger.Error(ctx, err, "failed reading message")
+				return
+			}
+
+			switch messageType {
+			case websocket.CloseMessage:
+				logger.Info(ctx, "received close message")
+				return
+			default:
+				logger.Info(ctx, "received message", "message", string(message))
+			}
+		}
+	}()
+
+	return conn, nil
 }
 
 func userRegister(ctx context.Context, c *clienthttp.ClientWithResponses, password string) (model.UserId, error) {

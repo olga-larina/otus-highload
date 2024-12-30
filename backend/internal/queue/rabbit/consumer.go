@@ -4,24 +4,86 @@ import (
 	"context"
 
 	"github.com/olga-larina/otus-highload/backend/internal/logger"
+	"github.com/olga-larina/otus-highload/backend/internal/queue"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 type Consumer struct {
-	queue       *Queue
+	queueName   string
 	consumerTag string
+	routingKey  string
+	queue       *Queue
+	channel     *amqp.Channel
 }
 
-func (q *Queue) NewConsumer(consumerTag string) *Consumer {
+func (q *Queue) NewConsumer(queueName string, consumerTag string, routingKey string) queue.QueueConsumer {
 	return &Consumer{
-		queue:       q,
+		queueName:   queueName,
 		consumerTag: consumerTag,
+		routingKey:  routingKey,
+		queue:       q,
 	}
+}
+
+func (c *Consumer) Start(ctx context.Context) error {
+	logger.Info(ctx, "starting rabbit consumer")
+
+	var err error
+
+	c.channel, err = c.queue.connection.Channel()
+	if err != nil {
+		return err
+	}
+	logger.Info(ctx, "got rabbit consumer channel, declaring queue")
+
+	// создаём динамическую очередь
+	queue, err := c.channel.QueueDeclare(
+		c.queueName,
+		true,  // durable
+		false, // delete when unused
+		false, // exclusive
+		false, // noWait
+		nil,   // arguments
+	)
+	if err != nil {
+		return err
+	}
+	logger.Info(ctx, "declared new rabbit queue, declaring binding", "queueName", queue.Name, "routingKey", c.routingKey)
+
+	err = c.channel.QueueBind(
+		queue.Name,
+		c.routingKey,
+		c.queue.exchangeName,
+		false, // noWait
+		nil,   // arguments
+	)
+	if err != nil {
+		return err
+	}
+
+	logger.Info(ctx, "queue bound to exchange, rabbit queue started")
+	return nil
 }
 
 func (c *Consumer) Stop(ctx context.Context) error {
 	logger.Info(ctx, "stopping rabbit consumer", "consumerTag", c.consumerTag)
 
-	err := c.queue.channel.Cancel(c.consumerTag, true)
+	err := c.channel.QueueUnbind(
+		c.queueName,
+		c.routingKey,
+		c.queue.exchangeName,
+		nil,
+	)
+	if err != nil {
+		return err
+	}
+
+	err = c.channel.Cancel(c.consumerTag, true)
+	if err != nil {
+		return err
+	}
+
+	err = c.channel.Close()
 	if err != nil {
 		return err
 	}
@@ -31,8 +93,8 @@ func (c *Consumer) Stop(ctx context.Context) error {
 }
 
 func (c *Consumer) ReceiveData(_ context.Context) (<-chan []byte, error) {
-	deliveries, err := c.queue.channel.Consume(
-		c.queue.queueName,
+	deliveries, err := c.channel.Consume(
+		c.queueName,
 		c.consumerTag,
 		true,  // noAck
 		false, // exclusive

@@ -50,12 +50,17 @@ type AuthConfig struct {
 }
 
 type QueueConfig struct {
-	URI          string `mapstructure:"uri"`
-	ExchangeName string `mapstructure:"exchangeName"`
-	ExchangeType string `mapstructure:"exchangeType"`
-	QueueName    string `mapstructure:"queueName"`
-	RoutingKey   string `mapstructure:"routingKey"`
-	ConsumerTag  string `mapstructure:"consumerTag"`
+	URI                string              `mapstructure:"uri"`
+	ExchangeName       string              `mapstructure:"exchangeName"`
+	ExchangeType       string              `mapstructure:"exchangeType"`
+	PostFeedCacheQueue SpecificQueueConfig `mapstructure:"postFeedCacheQueue"`
+	PostFeedUserQueue  SpecificQueueConfig `mapstructure:"postFeedUserQueue"`
+}
+
+type SpecificQueueConfig struct {
+	QueueName   string `mapstructure:"queueName"`
+	RoutingKey  string `mapstructure:"routingKey"`
+	ConsumerTag string `mapstructure:"consumerTag"`
 }
 
 type PostFeedConfig struct {

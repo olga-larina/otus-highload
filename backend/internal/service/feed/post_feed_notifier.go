@@ -6,18 +6,16 @@ import (
 
 	"github.com/olga-larina/otus-highload/backend/internal/logger"
 	"github.com/olga-larina/otus-highload/backend/internal/model"
+	"github.com/olga-larina/otus-highload/backend/internal/queue"
 )
 
 type PostFeedNotificationService struct {
-	queue QueueSender
+	queue      queue.QueueSender
+	routingKey string
 }
 
-type QueueSender interface {
-	SendData(ctx context.Context, data []byte) error
-}
-
-func NewPostFeedNotificationService(queue QueueSender) *PostFeedNotificationService {
-	return &PostFeedNotificationService{queue: queue}
+func NewPostFeedNotificationService(queue queue.QueueSender, routingKey string) *PostFeedNotificationService {
+	return &PostFeedNotificationService{queue: queue, routingKey: routingKey}
 }
 
 func (s *PostFeedNotificationService) NotifyInvalidateAll(ctx context.Context) error {
@@ -94,7 +92,7 @@ func (s *PostFeedNotificationService) notify(ctx context.Context, notification *
 		)
 		return err
 	}
-	err = s.queue.SendData(ctx, notificationStr)
+	err = s.queue.SendData(ctx, s.routingKey, notificationStr)
 	if err != nil {
 		logger.Error(
 			ctx, err, "failed notifying",

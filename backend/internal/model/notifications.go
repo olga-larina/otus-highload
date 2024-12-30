@@ -50,3 +50,7 @@ type DeletePostNotification struct {
 	UserId UserId `json:"user_id"`
 	PostId PostId `json:"post_id"`
 }
+
+type UserPostFeedNotification struct {
+	Posts []PostExtended `json:"posts"`
+}

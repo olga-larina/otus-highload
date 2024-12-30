@@ -11,20 +11,15 @@ type Queue struct {
 	uri          string
 	exchangeName string
 	exchangeType string
-	queueName    string
-	routingKey   string
 
 	connection *amqp.Connection
-	channel    *amqp.Channel
 }
 
-func NewQueue(uri string, exchangeName string, exchangeType string, queueName string, routingKey string) *Queue {
+func NewQueue(uri string, exchangeName string, exchangeType string) *Queue {
 	return &Queue{
 		uri:          uri,
 		exchangeName: exchangeName,
 		exchangeType: exchangeType,
-		queueName:    queueName,
-		routingKey:   routingKey,
 	}
 }
 
@@ -37,53 +32,8 @@ func (q *Queue) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	logger.Info(ctx, "got rabbit queue connection, getting channel")
 
-	q.channel, err = q.connection.Channel()
-	if err != nil {
-		return err
-	}
-	logger.Info(ctx, "got rabbit queue channel, declaring exchange", "exchangeName", q.exchangeName, "exchangeType", q.exchangeType)
-
-	err = q.channel.ExchangeDeclare(
-		q.exchangeName, // name
-		q.exchangeType, // type
-		true,           // durable
-		false,          // autoDelete
-		false,          // internal
-		false,          // noWait
-		nil,            // arguments
-	)
-	if err != nil {
-		return err
-	}
-	logger.Info(ctx, "rabbit exchange declared, declaring queue", "queueName", q.queueName)
-
-	queue, err := q.channel.QueueDeclare(
-		q.queueName,
-		true,  // durable
-		false, // delete when unused
-		false, // exclusive
-		false, // noWait
-		nil,   // arguments
-	)
-	if err != nil {
-		return err
-	}
-	logger.Info(ctx, "declared new rabbit queue, declaring binding", "routingKey", q.routingKey)
-
-	err = q.channel.QueueBind(
-		queue.Name,
-		q.routingKey,
-		q.exchangeName,
-		false, // noWait
-		nil,   // arguments
-	)
-	if err != nil {
-		return err
-	}
-
-	logger.Info(ctx, "queue bound to exchange, rabbit queue started")
+	logger.Info(ctx, "got rabbit queue connection")
 	return nil
 }
 

@@ -6,6 +6,7 @@ require (
 	github.com/getkin/kin-openapi v0.128.0
 	github.com/go-redsync/redsync/v4 v4.13.0
 	github.com/gorilla/mux v1.8.1
+	github.com/gorilla/websocket v1.5.3
 	github.com/jackc/pgx/v5 v5.7.1
 	github.com/lestrrat-go/jwx v1.2.30
 	github.com/oapi-codegen/nethttp-middleware v1.0.2
@@ -16,6 +17,7 @@ require (
 	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/redis/go-redis/v9 v9.7.0
 	github.com/rs/cors v1.11.1
+	github.com/spaolacci/murmur3 v1.1.0
 	github.com/spf13/viper v1.19.0
 	golang.org/x/crypto v0.28.0
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9
@@ -62,7 +64,6 @@ require (
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
-	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	github.com/speakeasy-api/openapi-overlay v0.9.0 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.6.0 // indirect

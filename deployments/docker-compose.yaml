@@ -29,6 +29,9 @@ services:
       - QUEUE_URI=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}:${RABBITMQ_PORT}/
       - SUBSCRIBERS_CACHE_URI=redis://redis:6379/0?protocol=3&db=0
       - POST_FEED_CACHE_URI=redis://redis:6379/1?protocol=3&db=1
+      - TARANTOOL_USER=${TARANTOOL_USER}
+      - TARANTOOL_PASSWORD=${TARANTOOL_PASSWORD}
+      - TARANTOOL_URI=tarantool:3301
     ports:
       - "8080:8080"
     volumes:

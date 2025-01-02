@@ -9,14 +9,16 @@ import (
 )
 
 type Config struct {
-	Logger     LoggerConfig     `mapstructure:"logger"`
-	HTTPServer HTTPServerConfig `mapstructure:"httpServer"`
-	Database   DatabaseConfig   `mapstructure:"database"`
-	Timezone   string           `mapstructure:"timezone"`
-	Auth       AuthConfig       `mapstructure:"auth"`
-	Queue      QueueConfig      `mapstructure:"queue"`
-	Cache      CachesConfig     `mapstructure:"caches"`
-	PostFeed   PostFeedConfig   `mapstructure:"postFeed"`
+	Logger           LoggerConfig           `mapstructure:"logger"`
+	HTTPServer       HTTPServerConfig       `mapstructure:"httpServer"`
+	Database         DatabaseConfig         `mapstructure:"database"`
+	InMemoryDatabase InMemoryDatabaseConfig `mapstructure:"inMemoryDatabase"`
+	Timezone         string                 `mapstructure:"timezone"`
+	Auth             AuthConfig             `mapstructure:"auth"`
+	Queue            QueueConfig            `mapstructure:"queue"`
+	Cache            CachesConfig           `mapstructure:"caches"`
+	PostFeed         PostFeedConfig         `mapstructure:"postFeed"`
+	Dialogue         DialogueConfig         `mapstructure:"dialogue"`
 }
 
 type LoggerConfig struct {
@@ -45,6 +47,12 @@ type DatabaseConnectConfig struct {
 	MaxConnIdleTime time.Duration `mapstructure:"maxConnIdleTime"`
 }
 
+type InMemoryDatabaseConfig struct {
+	URI      string `mapstructure:"uri"`
+	User     string `mapstructure:"user"`
+	Password string `mapstructure:"password"`
+}
+
 type AuthConfig struct {
 	PrivateKey string `mapstructure:"privateKey"`
 }
@@ -65,6 +73,10 @@ type SpecificQueueConfig struct {
 
 type PostFeedConfig struct {
 	MaxSize int `mapstructure:"maxSize"`
+}
+
+type DialogueConfig struct {
+	DbType string `mapstructure:"dbType"`
 }
 
 type CachesConfig struct {

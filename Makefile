@@ -3,6 +3,8 @@ DOCKER_IMG_BACKEND_SERVER="backend-server:develop"
 
 BIN_BACKEND_CLIENT:= "./backend/bin/client"
 
+BIN_BACKEND_DIALOG_GENERATOR := "./backend/bin/dialog-generator"
+
 DOCKER_IMG_MIGRATOR="backend-migrator:develop"
 
 GIT_HASH := $(shell git log --format="%h" -n 1)
@@ -43,15 +45,20 @@ migrate:
 migrate-down:
 	goose -dir backend/migrations postgres "postgres://otus:password@localhost:5432/backend" down
 
-# поднять окружение (только БД master, кеш и очередь)
+# сгенерировать данные по диалогам в postgres и tarantool (в ручном режиме)
+.PHONY: dialog-generator
+dialog-generator:
+	cd backend && go build -v -o $(BIN_BACKEND_DIALOG_GENERATOR) -ldflags "$(LDFLAGS)" ./cmd/dialog-generator && $(BIN_BACKEND_DIALOG_GENERATOR)
+
+# поднять окружение (только БД master, tarantool, кеш и очередь)
 .PHONY: up-infra
 up-infra:
-	docker compose --env-file deployments/.env -f deployments/docker-compose-db-master.yaml -f deployments/docker-compose-rabbit.yaml -f deployments/docker-compose-redis.yaml up -d
+	docker compose --env-file deployments/.env -f deployments/docker-compose-db-master.yaml -f deployments/docker-compose-tarantool.yaml -f deployments/docker-compose-rabbit.yaml -f deployments/docker-compose-redis.yaml up -d
 
-# потушить окружение (только БД master, кеш и очередь)
+# потушить окружение (только БД master, tarantool, кеш и очередь)
 .PHONY: down-infra
 down-infra:
-	docker compose --env-file deployments/.env -f deployments/docker-compose-db-master.yaml -f deployments/docker-compose-rabbit.yaml -f deployments/docker-compose-redis.yaml down
+	docker compose --env-file deployments/.env -f deployments/docker-compose-db-master.yaml -f deployments/docker-compose-tarantool.yaml -f deployments/docker-compose-rabbit.yaml -f deployments/docker-compose-redis.yaml down
 
 # поднять сервисы и окружение (БД master, кеш и очередь)
 .PHONY: up
@@ -92,3 +99,13 @@ up-sharded:
 .PHONY: down-sharded
 down-sharded:
 	docker compose --env-file deployments/.env -f deployments/docker-compose-db-sharded.yaml -f deployments/docker-compose-rabbit.yaml -f deployments/docker-compose-redis.yaml -f deployments/docker-compose.yaml down
+
+# поднять сервисы и окружение (БД master, tarantool, кеш и очередь)
+.PHONY: up-memory
+up-memory:
+	docker compose --env-file deployments/.env -f deployments/docker-compose-db-master.yaml -f deployments/docker-compose-tarantool.yaml -f deployments/docker-compose-rabbit.yaml -f deployments/docker-compose-redis.yaml -f deployments/docker-compose.yaml up -d --build
+
+# потушить сервисы и окружение (БД master, tarantool, кеш и очередь)
+.PHONY: down-memory
+down-memory:
+	docker compose --env-file deployments/.env -f deployments/docker-compose-db-master.yaml -f deployments/docker-compose-tarantool.yaml -f deployments/docker-compose-rabbit.yaml -f deployments/docker-compose-redis.yaml -f deployments/docker-compose.yaml down

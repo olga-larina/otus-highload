@@ -15,6 +15,7 @@ import (
 	middleware "github.com/oapi-codegen/nethttp-middleware"
 	"github.com/pckilgore/combuuid"
 	"github.com/redis/go-redis/v9"
+	tarantool "github.com/tarantool/go-tarantool/v2"
 
 	"github.com/olga-larina/otus-highload/backend/internal/logger"
 	"github.com/olga-larina/otus-highload/backend/internal/queue/rabbit"
@@ -26,6 +27,7 @@ import (
 	redis_cache "github.com/olga-larina/otus-highload/backend/internal/service/cache/redis"
 	"github.com/olga-larina/otus-highload/backend/internal/service/feed"
 	"github.com/olga-larina/otus-highload/backend/internal/service/shard"
+	"github.com/olga-larina/otus-highload/backend/internal/storage/memory"
 	sqlstorage "github.com/olga-larina/otus-highload/backend/internal/storage/sql"
 	"github.com/rs/cors"
 )
@@ -64,7 +66,7 @@ func main() {
 		syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 	defer cancel()
 
-	// storages
+	// database
 	var storageReplicaConfigs []*sqlstorage.DbConfig
 	if len(config.Database.Replicas.URI) > 0 {
 		replicasUri := strings.Split(config.Database.Replicas.URI, ",")
@@ -87,12 +89,38 @@ func main() {
 			logger.Error(ctx, err, "failed to close sql storage")
 		}
 	}()
+
+	// storages
 	userStorage := sqlstorage.NewUserStorage(db)
 	loginStorage := sqlstorage.NewLoginStorage(db)
 	friendStorage := sqlstorage.NewFriendStorage(db)
 	postStorage := sqlstorage.NewPostStorage(db)
 	postFeedStorage := sqlstorage.NewPostFeedStorage(db)
-	dialogStorage := sqlstorage.NewDialogStorage(db)
+
+	var dialogStorage service.DialogStorage
+	// dialogue storage
+	if config.Dialogue.DbType == "SQL" {
+		// sql
+		dialogStorage = sqlstorage.NewDialogStorage(db)
+	} else {
+		// tarantool
+		tarantoolDialer := tarantool.NetDialer{
+			Address:  config.InMemoryDatabase.URI,
+			User:     config.InMemoryDatabase.User,
+			Password: config.InMemoryDatabase.Password,
+		}
+		opts := tarantool.Opts{
+			Concurrency: 512,
+		}
+		tarantoolConn, err := tarantool.Connect(ctx, tarantoolDialer, opts)
+		if err != nil {
+			logger.Error(ctx, err, "failed to connect to tarantool")
+			return
+		}
+		defer tarantoolConn.Close()
+
+		dialogStorage = memory.NewDialogStorage(tarantoolConn)
+	}
 
 	// queue
 	queue := rabbit.NewQueue(

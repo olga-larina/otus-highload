@@ -48,6 +48,9 @@ queue:
 # Post feed config
 postFeed:
   maxSize: 1000 # максимальное количество постов в ленте
+# Dialogue config
+dialogue:
+  dbType: MEMORY # SQL (postgres), MEMORY (tarantool)
 # Caches config (use different db)
 caches:
   subscribers:
@@ -56,3 +59,8 @@ caches:
   postFeed:
     uri: redis://localhost:6379/1?protocol=3&db=1
     ttl: 60m
+# InMemory database config; используется только для dialogue.dbType=MEMORY
+inMemoryDatabase: 
+  uri: localhost:3301
+  user: otus
+  password: secretpassword

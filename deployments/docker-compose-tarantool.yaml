@@ -1,0 +1,24 @@
+services:
+  tarantool:
+    image: tarantool/tarantool:2.11.5
+    restart: always
+    container_name: tarantool
+    environment:
+      - TARANTOOL_USER=${TARANTOOL_USER}
+      - TARANTOOL_PASSWORD=${TARANTOOL_PASSWORD}
+      - TARANTOOL_LOG_LEVEL=6
+      - TARANTOOL_MEMTX_MEMORY=536870912
+    ports:
+      - "3301:3301"
+    volumes:
+      - tarantool_data:/var/lib/tarantool
+      - ../backend/tarantool:/opt/tarantool/files
+    command: |
+      tarantool '/opt/tarantool/files/schema.lua'
+    deploy:
+      resources:
+        limits:
+          cpus: '1.00'
+
+volumes:
+  tarantool_data:

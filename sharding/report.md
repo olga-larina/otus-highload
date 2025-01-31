@@ -51,7 +51,7 @@
 
 2) Для шардирования будем использовать Citus для PostgreSQL (см. [docker-compose-db-sharded.yaml](../deployments/docker-compose-db-sharded.yaml)). В рамках ДЗ один master, один manager, два workers (на первом этапе).
 
-3) Таблица сообщений `messages` - см. [messages.sql](../backend/migrations/20241220180000_messages.sql). Т.к. в Citus есть ограничение `Distributed relations cannot have UNIQUE, EXCLUDE, or PRIMARY KEY constraints that do not include the partition column (with an equality operator if EXCLUDE).`, первичный ключ таблицы составной и состоит из `dialog_id` (ID диалога, будущий ключ шардирования) и `message_id` (ID сообщения).
+3) Таблица сообщений `messages` - см. [messages.sql](../backend/migrator/migrations/20241220180000_messages.sql). Т.к. в Citus есть ограничение `Distributed relations cannot have UNIQUE, EXCLUDE, or PRIMARY KEY constraints that do not include the partition column (with an equality operator if EXCLUDE).`, первичный ключ таблицы составной и состоит из `dialog_id` (ID диалога, будущий ключ шардирования) и `message_id` (ID сообщения).
 
 4) Заходим в контейнер master
 ```

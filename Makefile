@@ -1,9 +1,12 @@
-BIN_BACKEND_SERVER := "./backend/bin/server"
-DOCKER_IMG_BACKEND_SERVER="backend-server:develop"
+BIN_BACKEND_SOCIAL_SERVER := "./backend/social/bin/server"
+DOCKER_IMG_BACKEND_SOCIAL_SERVER="backend-social-server:develop"
 
-BIN_BACKEND_CLIENT:= "./backend/bin/client"
+BIN_BACKEND_SOCIAL_CLIENT:= "./backend/social/bin/client"
 
-BIN_BACKEND_DIALOG_GENERATOR := "./backend/bin/dialog-generator"
+BIN_BACKEND_DIALOG_SERVER := "./backend/dialog/bin/server"
+DOCKER_IMG_BACKEND_DIALOG_SERVER="backend-dialog-server:develop"
+
+BIN_BACKEND_DIALOG_GENERATOR := "./backend/dialog/bin/dialog-generator"
 
 DOCKER_IMG_MIGRATOR="backend-migrator:develop"
 
@@ -13,27 +16,37 @@ LDFLAGS := -X main.release="develop" -X main.buildDate=$(shell date -u +%Y-%m-%d
 # сгенерировать код по спецификации Open API
 .PHONY: generate_from_openapi
 generate_from_openapi:
-	cd backend && go generate ./...
+	cd backend/social && go generate ./... && cd ../dialog && go generate ./...
 
-# скомпилировать бинарные файлы сервиса
-.PHONY: build_backend_server
-build_backend_server:
-	cd backend && go build -v -o $(BIN_BACKEND_SERVER) -ldflags "$(LDFLAGS)" ./cmd/server
+# скомпилировать бинарные файлы сервиса соц.сети
+.PHONY: build_backend_social_server
+build_backend_social_server:
+	cd backend/social && go build -v -o $(BIN_BACKEND_SOCIAL_SERVER) -ldflags "$(LDFLAGS)" ./cmd/server
 
-# собрать и запустить сервисы с конфигами по умолчанию
-.PHONY: run_backend_server
-run_backend_server: build_backend_server
-	cd backend && $(BIN_BACKEND_SERVER) -config ./configs/server_config_local.yaml
+# собрать и запустить сервис соц.сети с конфигами по умолчанию
+.PHONY: run_backend_social_server
+run_backend_social_server: build_backend_social_server
+	cd backend/social && $(BIN_BACKEND_SOCIAL_SERVER) -config ./configs/server_config_local.yaml
 
 # скомпилировать бинарные файлы проверочного клиента
-.PHONY: build_backend_client
-build_backend_client:
-	cd backend && go build -v -o $(BIN_BACKEND_CLIENT) -ldflags "$(LDFLAGS)" ./cmd/client
+.PHONY: build_backend_social_client
+build_backend_social_client:
+	cd backend/social && go build -v -o $(BIN_BACKEND_SOCIAL_CLIENT) -ldflags "$(LDFLAGS)" ./cmd/client
 
-# собрать и запустить проверочного клиента
-.PHONY: run_backend_client
-run_backend_client: build_backend_client
-	cd backend && $(BIN_BACKEND_CLIENT)
+# собрать и запустить проверочного клиента для сервиса соц.сети
+.PHONY: run_backend_social_client
+run_backend_social_client: build_backend_social_client
+	cd backend/social && $(BIN_BACKEND_SOCIAL_CLIENT)
+
+# скомпилировать бинарные файлы сервиса диалогов
+.PHONY: build_backend_dialog_server
+build_backend_dialog_server:
+	cd backend/dialog && go build -v -o $(BIN_BACKEND_DIALOG_SERVER) -ldflags "$(LDFLAGS)" ./cmd/server
+
+# собрать и запустить сервис соц.сети с конфигами по умолчанию
+.PHONY: run_backend_dialog_server
+run_backend_dialog_server: build_backend_dialog_server
+	cd backend/dialog && $(BIN_BACKEND_DIALOG_SERVER) -config ./configs/server_config_local.yaml
 
 # применить миграции Postgres (в ручном режиме)
 .PHONY: migrate
@@ -48,7 +61,7 @@ migrate-down:
 # сгенерировать данные по диалогам в postgres и tarantool (в ручном режиме)
 .PHONY: dialog-generator
 dialog-generator:
-	cd backend && go build -v -o $(BIN_BACKEND_DIALOG_GENERATOR) -ldflags "$(LDFLAGS)" ./cmd/dialog-generator && $(BIN_BACKEND_DIALOG_GENERATOR)
+	cd backend/dialog && go build -v -o $(BIN_BACKEND_DIALOG_GENERATOR) -ldflags "$(LDFLAGS)" ./cmd/dialog-generator && $(BIN_BACKEND_DIALOG_GENERATOR)
 
 # поднять окружение (только БД master, tarantool, кеш и очередь)
 .PHONY: up-infra

@@ -55,7 +55,7 @@ box.space.messages:create_index('primary', {
 - `make up-infra` - поднять окружение (БД Postgres master, tarantool, кеши, очередь)
 - `make down-infra` - потушить окружение
 
-Использован скрипт для генерации данных по диалогам в Postgres и Tarantool - [dialog-generator](../backend/cmd/dialog-generator/main.go). Из таблицы `users` (которая заполнена в предыдущих ДЗ) в цикле случайным образом отбирается по 2 пользователя, рассчитывается `dialog_id` (аналогично коду приложения, с использованием `murmur3.Sum128`), генерируются сообщения. Всего сгенерировано 10_000 диалогов, в каждом - по 100 сообщений (по 50 сообщений от каждого пользователя). Данные записаны в Postgres, Tarantool, а также в csv файл, чтобы впоследствии использовать в Jmeter при НТ.  
+Использован скрипт для генерации данных по диалогам в Postgres и Tarantool - [dialog-generator](../backend/dialog/cmd/dialog-generator/main.go). Из таблицы `users` (которая заполнена в предыдущих ДЗ) в цикле случайным образом отбирается по 2 пользователя, рассчитывается `dialog_id` (аналогично коду приложения, с использованием `murmur3.Sum128`), генерируются сообщения. Всего сгенерировано 10_000 диалогов, в каждом - по 100 сообщений (по 50 сообщений от каждого пользователя). Данные записаны в Postgres, Tarantool, а также в csv файл, чтобы впоследствии использовать в Jmeter при НТ.  
 
 После генерации в Tarantool вызван `box.snapshot()`, чтобы инициировать ручное сохранение данных. Для этого выполнено подключение к контейнеру Tarantool, а внутри него - `tarantoolctl connect localhost:3301`. Через `tarantoolctl` также можно проверить работоспособность функции `get_messages_by_dialog('6391bf6d37bb69d849f2fff6e1c201e1')`, посмотреть количество записей в таблице `box.space.messages:count()` и т.д.
 
@@ -73,7 +73,7 @@ box.space.messages:create_index('primary', {
 
 ### Результаты НТ Postgres
 
-Для проведения НТ с Postgres сервис был поднят с параметром `dialogue.dbType`=`SQL` в [конфигах](../backend/configs/server_config.yaml) через `make up-memory` в [Makefile](../Makefile).  
+Для проведения НТ с Postgres сервис был поднят с параметром `dialogue.dbType`=`SQL` в [конфигах](../backend/dialog/configs/server_config.yaml) через `make up-memory` в [Makefile](../Makefile).  
 По результатам видно, что в целом Postgres справляется и с высокой нагрузкой, даже при 1000 потоках сервис отвечает в течение 5 секунд, ошибочных запросов нет. При этом, в запросе Postgres присутствует сортировка по времени отправки сообщения (`send_time`).
 
 | # Threads |   # Samples  |   Average  |   Median  |   90% Line  |   95% Line  |   99% Line  |   Min  |   Max  |   Error %  |   Throughput  |   Received KB/sec  |   Sent KB/sec  |
@@ -91,7 +91,7 @@ box.space.messages:create_index('primary', {
 
 ### Результаты НТ Tarantool
 
-Для проведения НТ с Tarantool сервис был поднят с параметром `dialogue.dbType`=`MEMORY` в [конфигах](../backend/configs/server_config.yaml) через `make up-memory` в [Makefile](../Makefile).  
+Для проведения НТ с Tarantool сервис был поднят с параметром `dialogue.dbType`=`MEMORY` в [конфигах](../backend/dialog/configs/server_config.yaml) через `make up-memory` в [Makefile](../Makefile).  
 По результатам видно, что Tarantool намного хуже справляется с нагрузкой (даже с учётом того, что просто идёт выборка по ID диалога и нет никаких сортировок). Эти результаты НТ - это максимум, что удалось получить настройкой различных параметров Tarantool (конфигурации, индексов). Причём при 1000 потоках в какой-то момент все запросы уходят в таймаут после 5 секунд. Возможно, это связано со слишком большим объёмом данных и использованием только одного экземпляра (хотя Postgres с одним экземпляром такую нагрузку выдержал успешно).
 
 | # Threads |   # Samples  |   Average  |   Median  |   90% Line  |   95% Line  |   99% Line  |   Min  |   Max  |   Error %  |   Throughput  |   Received KB/sec  |   Sent KB/sec  |

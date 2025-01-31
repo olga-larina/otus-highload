@@ -1,0 +1,43 @@
+# Конфиг для проверки
+# Logger config
+logger:
+  level: "DEBUG"
+# HTTP server config
+httpServer:
+  host: 0.0.0.0
+  port: 8081
+  readTimeout: "5s"
+# Database config; используется только для dialogue.dbType=SQL
+# database:
+#   master: # master
+#     uri: postgres://otus:password@localhost:5432/backend
+#     connect:
+#       maxConns: 10
+#       maxConnLifetime: "1h"
+#       maxConnIdleTime: "10m"
+  # replicas: # replicas, may be absent or uri may be empty
+  #   uri: "postgres://otus:password@localhost:5433/backend,postgres://otus:password@localhost:5434/backend" # uri list
+  #   connect:
+  #     maxConns: 10
+  #     maxConnLifetime: "1h"
+  #     maxConnIdleTime: "10m"
+# Timezone
+timezone: "Europe/Moscow"
+# Auth config
+auth:
+  # openssl ecparam -name prime256v1 -genkey -noout -out ecprivatekey.pem
+  PrivateKey: |-
+    -----BEGIN EC PRIVATE KEY-----
+    MHcCAQEEIN2dALnjdcZaIZg4QuA6Dw+kxiSW502kJfmBN3priIhPoAoGCCqGSM49
+    AwEHoUQDQgAE4pPyvrB9ghqkT1Llk0A42lixkugFd/TBdOp6wf69O9Nndnp4+HcR
+    s9SlG/8hjB2Hz42v4p3haKWv3uS1C6ahCQ==
+    -----END EC PRIVATE KEY-----
+# Dialogue config
+dialogue:
+  dbType: MEMORY # SQL (postgres), MEMORY (tarantool)
+# InMemory database config; используется только для dialogue.dbType=MEMORY
+inMemoryDatabase: 
+  uri: localhost:3301
+  user: otus
+  password: secretpassword
+  concurrency: 512

@@ -17,7 +17,7 @@ ORDER BY id
 ```
 
 ## Загрузка данных в таблицу для НТ
-Предварительно было создано расширение `uuid-ossp` с помощью [uuid_extension.sql](../backend/migrations/20241202135709_uuid_extension.sql).  
+Предварительно было создано расширение `uuid-ossp` с помощью [uuid_extension.sql](../backend/migrator/migrations/20241202135709_uuid_extension.sql).  
 Затем в таблицу `users` был загружен готовый файл [people.v2.csv](https://raw.githubusercontent.com/OtusTeam/highload/master/homework/people.v2.csv) с помощью скрипта [load_data.sh](load_data.sh).
 
 ## Нагрузочное тестирование
@@ -76,7 +76,7 @@ Execution Time: 266.118 ms
 ```sql
 create index first_name_second_name_idx on users(first_name text_pattern_ops, second_name text_pattern_ops);
 ```
-(см. [users_name_index.sql](../backend/migrations/20241203090000_users_name_index.sql))
+(см. [users_name_index.sql](../backend/migrator/migrations/20241203090000_users_name_index.sql))
 
 Для запроса в форме `first_name LIKE 'prefix%' and second_name LIKE 'prefix%'` такой индекс выглядит наиболее оптимальным, т.к. поля индекса полностью соответствуют условиям фильтрации (поиск сначала по first_name, затем - по second_name). Параметр text_pattern_ops используется для того, чтобы можно было искать по условию LIKE 'prefix%'. По умолчанию строится индекс btree.
 

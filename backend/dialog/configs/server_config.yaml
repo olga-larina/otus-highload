@@ -1,0 +1,36 @@
+# Logger config
+logger:
+  level: "DEBUG"
+# HTTP server config
+httpServer:
+  host: ${HTTP_SERVER_HOST}
+  port: ${HTTP_SERVER_PORT}
+  readTimeout: "5s"
+# Database config; используется только для dialogue.dbType=SQL
+# database:
+#   master: # master
+#     uri: ${DB_MASTER_URI}
+#     connect:
+#       maxConns: 10
+#       maxConnLifetime: "1h"
+#       maxConnIdleTime: "10m"
+#   replicas: # replicas, may be absent or uri may be empty
+#     uri: ${DB_REPLICAS_URI}
+#     connect:
+#       maxConns: 10
+#       maxConnLifetime: "1h"
+#       maxConnIdleTime: "10m"
+# Timezone
+timezone: "Europe/Moscow"
+# Auth config
+auth:
+  PrivateKey: ${AUTH_PRIVATE_KEY}
+# Dialogue config
+dialogue:
+  dbType: MEMORY # SQL (postgres), MEMORY (tarantool)
+# InMemory database config; используется только для dialogue.dbType=MEMORY
+inMemoryDatabase:
+  uri: ${TARANTOOL_URI}
+  user: ${TARANTOOL_USER}
+  password: ${TARANTOOL_PASSWORD}
+  concurrency: 512

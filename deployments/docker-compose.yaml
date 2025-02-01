@@ -3,39 +3,36 @@ services:
   backend-migrator:
     image: backend-migrator:develop
     build:
-      context: ../backend
+      context: ../backend/migrator
       dockerfile: build/migrator/Dockerfile
     environment:
       - DB_URI=${DB_MASTER_URI}
       - DB_TYPE=postgres
     volumes:
-      - "../backend/migrations:/app/migrations"
+      - "../backend/migrator/migrations:/app/migrations"
     restart: on-failure
     depends_on:
       dbMaster:
         condition: service_healthy
 
-  backend-server:
-    image: backend-server:develop
+  backend-social-server:
+    image: backend-social-server:develop
     build:
       context: ../backend
-      dockerfile: build/server/Dockerfile
+      dockerfile: social/build/server/Dockerfile
     environment:
       - DB_MASTER_URI=${DB_MASTER_URI}
       - DB_REPLICAS_URI=${DB_REPLICAS_URI}
-      - HTTP_SERVER_HOST=${HTTP_SERVER_HOST}
-      - HTTP_SERVER_PORT=${HTTP_SERVER_PORT}
+      - HTTP_SERVER_HOST=${HTTP_SERVER_SOCIAL_HOST}
+      - HTTP_SERVER_PORT=${HTTP_SERVER_SOCIAL_PORT}
       - AUTH_PRIVATE_KEY=${AUTH_PRIVATE_KEY}
       - QUEUE_URI=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}:${RABBITMQ_PORT}/
       - SUBSCRIBERS_CACHE_URI=redis://redis:6379/0?protocol=3&db=0
       - POST_FEED_CACHE_URI=redis://redis:6379/1?protocol=3&db=1
-      - TARANTOOL_USER=${TARANTOOL_USER}
-      - TARANTOOL_PASSWORD=${TARANTOOL_PASSWORD}
-      - TARANTOOL_URI=tarantool:3301
     ports:
       - "8080:8080"
     volumes:
-      - "../backend/configs/server_config.yaml:/etc/backend/server/config.yaml"
+      - "../backend/social/configs/server_config.yaml:/etc/backend/server/config.yaml"
     restart: always
     depends_on:
       backend-migrator:
@@ -44,3 +41,29 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+
+  backend-dialog-server:
+    image: backend-dialog-server:develop
+    build:
+      context: ../backend
+      dockerfile: dialog/build/server/Dockerfile
+    environment:
+      - DB_MASTER_URI=${DB_MASTER_URI}
+      - DB_REPLICAS_URI=${DB_REPLICAS_URI}
+      - HTTP_SERVER_HOST=${HTTP_SERVER_DIALOG_HOST}
+      - HTTP_SERVER_PORT=${HTTP_SERVER_DIALOG_PORT}
+      - AUTH_PRIVATE_KEY=${AUTH_PRIVATE_KEY}
+      - TARANTOOL_USER=${TARANTOOL_USER}
+      - TARANTOOL_PASSWORD=${TARANTOOL_PASSWORD}
+      - TARANTOOL_URI=tarantool:3301
+    ports:
+      - "8081:8080"
+    volumes:
+      - "../backend/dialog/configs/server_config.yaml:/etc/backend/server/config.yaml"
+    restart: always
+    # включать в случае использования Postgres вместо Tarantool 
+    # depends_on:
+    #   backend-migrator:
+    #     condition: service_completed_successfully
+    #   dbMaster:
+    #     condition: service_healthy

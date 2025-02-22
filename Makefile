@@ -122,3 +122,13 @@ up-memory:
 .PHONY: down-memory
 down-memory:
 	docker compose --env-file deployments/.env -f deployments/docker-compose-db-master.yaml -f deployments/docker-compose-tarantool.yaml -f deployments/docker-compose-rabbit.yaml -f deployments/docker-compose-redis.yaml -f deployments/docker-compose.yaml down
+
+# поднять сервисы и окружение (БД master и реплики, tarantool, кеш и очередь+мониторинги+несколько реплик сервиса+haproxy, nginx)
+.PHONY: up-balancing
+up-balancing:
+	docker compose --env-file deployments/.env --env-file deployments/.env_balancing -f deployments/docker-compose-db-master.yaml -f deployments/docker-compose-db-replicas.yaml -f deployments/docker-compose-tarantool.yaml -f deployments/docker-compose-rabbit.yaml -f deployments/docker-compose-redis.yaml -f deployments/docker-compose-monitoring.yaml -f deployments/docker-compose-balancing.yaml -f deployments/docker-compose.yaml up -d --build
+
+# потушить сервисы и окружение (БД master и реплики, tarantool, кеш и очередь+мониторинги+несколько реплик сервиса+haproxy, nginx)
+.PHONY: down-balancing
+down-balancing:
+	docker compose --env-file deployments/.env --env-file deployments/.env_balancing -f deployments/docker-compose-db-master.yaml -f deployments/docker-compose-db-replicas.yaml -f deployments/docker-compose-tarantool.yaml -f deployments/docker-compose-rabbit.yaml -f deployments/docker-compose-redis.yaml -f deployments/docker-compose-monitoring.yaml -f deployments/docker-compose-balancing.yaml -f deployments/docker-compose.yaml down

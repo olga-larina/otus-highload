@@ -1,0 +1,56 @@
+services:
+
+  backend-social-server-2:
+    image: backend-social-server:develop
+    build:
+      context: ../backend
+      dockerfile: social/build/server/Dockerfile
+    environment:
+      - DB_MASTER_URI=${DB_MASTER_URI}
+      - DB_REPLICAS_URI=${DB_REPLICAS_URI}
+      - DB_MASTER_MAX_CONNS=${DB_MASTER_MAX_CONNS}
+      - DB_REPLICAS_MAX_CONNS=${DB_REPLICAS_MAX_CONNS}
+      - HTTP_SERVER_HOST=${HTTP_SERVER_SOCIAL_HOST}
+      - HTTP_SERVER_PORT=${HTTP_SERVER_SOCIAL_PORT}
+      - AUTH_PRIVATE_KEY=${AUTH_PRIVATE_KEY}
+      - QUEUE_URI=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}:${RABBITMQ_PORT}/
+      - SUBSCRIBERS_CACHE_URI=redis://redis:6379/0?protocol=3&db=0
+      - POST_FEED_CACHE_URI=redis://redis:6379/1?protocol=3&db=1
+    ports:
+      - "8082:8080"
+    volumes:
+      - "../backend/social/configs/server_config.yaml:/etc/backend/server/config.yaml"
+    restart: unless-stopped
+    depends_on:
+      backend-migrator:
+        condition: service_completed_successfully
+      dbMaster:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  haproxy:
+    image: haproxy:2.4
+    container_name: haproxy-lb
+    ports:
+      - "4080:80"
+    volumes:
+      - "./balancing/haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg"
+    restart: on-failure
+    depends_on:
+      dbReplica1:
+        condition: service_healthy
+      dbReplica2:
+        condition: service_healthy
+
+  nginx:
+    image: nginx:1.21
+    container_name: nginx-lb
+    volumes:
+      - "./balancing/nginx/nginx.conf:/etc/nginx/nginx.conf"
+    ports:
+      - "4088:80"
+    restart: on-failure
+    depends_on:
+      - backend-social-server
+      - backend-social-server-2

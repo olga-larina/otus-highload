@@ -11,13 +11,13 @@ database:
   master: # master
     uri: ${DB_MASTER_URI}
     connect:
-      maxConns: 80
+      maxConns: ${DB_MASTER_MAX_CONNS}
       maxConnLifetime: "1h"
       maxConnIdleTime: "10m"
   replicas: # replicas, may be absent or uri may be empty
     uri: ${DB_REPLICAS_URI}
     connect:
-      maxConns: 80
+      maxConns: ${DB_REPLICAS_MAX_CONNS}
       maxConnLifetime: "1h"
       maxConnIdleTime: "10m"
 # Timezone

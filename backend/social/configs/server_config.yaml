@@ -38,6 +38,17 @@ queue:
     queueName: "post-feed-%v-queue-%v" # очередь для конкретного пользователя и конкретного экземпляра
     routingKey: "post-feed-%v" # роутинг по конкретному пользователю
     consumerTag: "backend-consumer-%v-%v" # разный тег для каждого экземпляра и пользователя
+# Saga queue config
+sagaQueue:
+  uri: ${QUEUE_URI}
+  exchangeName: "backend-saga-events"
+  exchangeType: "direct" # direct|fanout|topic|x-custom
+  userCreatedQueue:
+    routingKey: "user-created"
+  verifierStatusQueue:
+    queueName: "verifier-status-queue"
+    routingKey: "verifier-status"
+    consumerTag: "backend-saga-social-consumer-%v"
 # Post feed config
 postFeed:
   maxSize: 1000 # максимальное количество постов в ленте

@@ -5,6 +5,7 @@ import "time"
 type UserExtended struct {
 	User
 	PasswordHash []byte `db:"password_hash"`
+	Status       UserStatus
 }
 
 type PostExtended struct {
@@ -21,3 +22,11 @@ type DialogMessageExtended struct {
 	DialogId DialogId
 	SendTime time.Time
 }
+
+type UserStatus = int
+
+const (
+	UserPendingVerification   = 0
+	UserVerificationFailed    = 10
+	UserVerificationSucceeded = 100
+)

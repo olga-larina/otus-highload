@@ -1,0 +1,20 @@
+# Конфиг для проверки
+# Logger config
+logger:
+  level: "DEBUG"
+# Timezone
+timezone: "Europe/Moscow"
+# Saga user created queue config
+userCreatedQueue:
+  uri: amqp://rmuser:rmpassword@localhost:5672/
+  exchangeName: "backend-saga-events"
+  exchangeType: "direct" # direct|fanout|topic|x-custom
+  queueName: "user-created-queue"
+  routingKey: "user-created"
+  consumerTag: "backend-saga-verifier-consumer-%v" # разный тег для каждого экземпляра
+# Saga verifier status queue config
+verifierStatusQueue:
+  uri: amqp://rmuser:rmpassword@localhost:5672/
+  exchangeName: "backend-saga-events"
+  exchangeType: "direct" # direct|fanout|topic|x-custom
+  routingKey: "verifier-status"

@@ -22,16 +22,27 @@ func NewUserStorage(db db.Db) *UserStorage {
 }
 
 const createUserSQL = `
-INSERT INTO users (id, first_name, second_name, city, gender, birthdate, biography, password_hash)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+INSERT INTO users (id, first_name, second_name, city, gender, birthdate, biography, password_hash, user_status)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 `
 
 func (s *UserStorage) CreateUser(ctx context.Context, user *model.UserExtended) error {
 	_, err := s.db.Write(
 		ctx,
 		createUserSQL,
-		user.Id, user.FirstName, user.SecondName, user.City, user.Gender, user.Birthdate, user.Biography, user.PasswordHash,
+		user.Id, user.FirstName, user.SecondName, user.City, user.Gender, user.Birthdate, user.Biography, user.PasswordHash, user.Status,
 	)
+	return err
+}
+
+const updateUserStatusSQL = `
+UPDATE users
+SET user_status = $2
+WHERE id = $1 AND user_status < $2
+`
+
+func (s *UserStorage) UpdateUserStatus(ctx context.Context, id *model.UserId, status *model.UserStatus) error {
+	_, err := s.db.Write(ctx, updateUserStatusSQL, &id, &status)
 	return err
 }
 

@@ -15,7 +15,6 @@ require (
 	github.com/olga-larina/otus-highload/pkg v0.0.0-00010101000000-000000000000
 	github.com/pckilgore/combuuid v0.0.0-20240715172338-7cc918a108ae
 	github.com/prometheus/client_golang v1.20.5
-	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/redis/go-redis/v9 v9.7.0
 	github.com/rs/cors v1.11.1
 	github.com/spf13/viper v1.19.0
@@ -64,6 +63,7 @@ require (
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.55.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
+	github.com/rabbitmq/amqp091-go v1.10.0 // indirect
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect

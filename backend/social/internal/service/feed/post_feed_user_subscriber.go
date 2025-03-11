@@ -7,8 +7,8 @@ import (
 	"sync"
 
 	"github.com/olga-larina/otus-highload/pkg/logger"
+	"github.com/olga-larina/otus-highload/pkg/queue"
 	"github.com/olga-larina/otus-highload/social/internal/model"
-	"github.com/olga-larina/otus-highload/social/internal/queue"
 	"github.com/pckilgore/combuuid"
 	"go.opentelemetry.io/otel"
 )

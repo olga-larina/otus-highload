@@ -69,3 +69,17 @@ services:
     #     condition: service_completed_successfully
     #   dbMaster:
     #     condition: service_healthy
+
+  backend-verifier-server:
+    image: backend-verifier-server:develop
+    build:
+      context: ../backend
+      dockerfile: verifier/build/server/Dockerfile
+    environment:
+      - QUEUE_URI=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}:${RABBITMQ_PORT}/
+    volumes:
+      - "../backend/verifier/configs/server_config.yaml:/etc/backend/server/config.yaml"
+    restart: always
+    depends_on:
+      rabbitmq:
+        condition: service_healthy

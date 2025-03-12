@@ -15,6 +15,7 @@ type Config struct {
 	Timezone   string           `mapstructure:"timezone"`
 	Auth       AuthConfig       `mapstructure:"auth"`
 	Queue      QueueConfig      `mapstructure:"queue"`
+	SagaQueue  SagaQueueConfig  `mapstructure:"sagaQueue"`
 	Cache      CachesConfig     `mapstructure:"caches"`
 	PostFeed   PostFeedConfig   `mapstructure:"postFeed"`
 	Dialogue   DialogueConfig   `mapstructure:"dialogue"`
@@ -56,6 +57,14 @@ type QueueConfig struct {
 	ExchangeType       string              `mapstructure:"exchangeType"`
 	PostFeedCacheQueue SpecificQueueConfig `mapstructure:"postFeedCacheQueue"`
 	PostFeedUserQueue  SpecificQueueConfig `mapstructure:"postFeedUserQueue"`
+}
+
+type SagaQueueConfig struct {
+	URI                 string              `mapstructure:"uri"`
+	ExchangeName        string              `mapstructure:"exchangeName"`
+	ExchangeType        string              `mapstructure:"exchangeType"`
+	UserCreatedQueue    SpecificQueueConfig `mapstructure:"userCreatedQueue"`
+	VerifierStatusQueue SpecificQueueConfig `mapstructure:"verifierStatusQueue"`
 }
 
 type SpecificQueueConfig struct {

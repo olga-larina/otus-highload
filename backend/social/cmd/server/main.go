@@ -20,10 +20,10 @@ import (
 	pkg_clienthttp "github.com/olga-larina/otus-highload/pkg/http/client"
 	pkg_serverhttp "github.com/olga-larina/otus-highload/pkg/http/server"
 	"github.com/olga-larina/otus-highload/pkg/logger"
+	"github.com/olga-larina/otus-highload/pkg/queue/rabbit"
 	"github.com/olga-larina/otus-highload/pkg/service/auth"
 	pkg_sqlstorage "github.com/olga-larina/otus-highload/pkg/storage/sql"
 	"github.com/olga-larina/otus-highload/pkg/tracing"
-	"github.com/olga-larina/otus-highload/social/internal/queue/rabbit"
 	internalhttp "github.com/olga-larina/otus-highload/social/internal/server/http"
 	"github.com/olga-larina/otus-highload/social/internal/service"
 	cacher "github.com/olga-larina/otus-highload/social/internal/service/cache"
@@ -123,6 +123,23 @@ func main() {
 		return
 	}
 
+	// saga queue
+	sagaQueue := rabbit.NewQueue(
+		config.SagaQueue.URI,
+		config.SagaQueue.ExchangeName,
+		config.SagaQueue.ExchangeType,
+	)
+	if err := sagaQueue.Start(ctx); err != nil {
+		logger.Error(ctx, err, "saga queue failed to start")
+		return
+	}
+	// user created publisher
+	sagaPublisher := sagaQueue.NewPublisher()
+	if err := sagaPublisher.Start(ctx); err != nil {
+		logger.Error(ctx, err, "saga publisher failed to start")
+		return
+	}
+
 	// subscribers cache
 	subscriberRedisOpts, err := redis.ParseURL(config.Cache.SubscribersCache.URI)
 	if err != nil {
@@ -185,6 +202,21 @@ func main() {
 	httpClient = httpClient.SetBaseURL(config.Dialogue.BaseURI)
 	httpDialogClient := pkg_clienthttp.NewHttpClient(httpClient)
 
+	// user status service
+	userStatusService := service.NewUserStatusService(
+		sagaQueue,
+		config.SagaQueue.VerifierStatusQueue.QueueName,
+		config.SagaQueue.VerifierStatusQueue.ConsumerTag,
+		config.SagaQueue.VerifierStatusQueue.RoutingKey,
+		userStorage,
+		serviceId,
+	)
+
+	if err := userStatusService.Start(ctx); err != nil {
+		logger.Error(ctx, err, "userStatusService failed to start")
+		return
+	}
+
 	// services
 	authenticator, err := auth.NewFakeAuthenticator(config.Auth.PrivateKey)
 	if err != nil {
@@ -194,7 +226,7 @@ func main() {
 	authService := auth.NewAuthService()
 	passwordService := service.NewPasswordService()
 	loginService := service.NewLoginService(loginStorage, passwordService, authenticator)
-	userService := service.NewUserService(userStorage, passwordService)
+	userService := service.NewUserService(userStorage, passwordService, sagaPublisher, config.SagaQueue.UserCreatedQueue.RoutingKey)
 	friendService := service.NewFriendService(friendStorage, postFeedNotificationService)
 	postService := service.NewPostService(postStorage, postFeedNotificationService)
 	postFeedService := feed.NewPostFeedService(postFeedCacher, config.PostFeed.MaxSize)
@@ -294,12 +326,24 @@ func main() {
 
 	<-ctx.Done()
 
+	if err := userStatusService.Stop(ctx); err != nil {
+		logger.Error(ctx, err, "failed to stop userStatusService")
+	}
+
 	if err := postFeedUpdater.Stop(ctx); err != nil {
 		logger.Error(ctx, err, "failed to stop postFeedUpdater")
 	}
 
+	if err := sagaPublisher.Stop(ctx); err != nil {
+		logger.Error(ctx, err, "failed to stop saga publisher")
+	}
+
 	if err := publisher.Stop(ctx); err != nil {
 		logger.Error(ctx, err, "failed to stop postFeed publisher")
+	}
+
+	if err := sagaQueue.Stop(ctx); err != nil {
+		logger.Error(ctx, err, "failed to stop saga queue")
 	}
 
 	if err := queue.Stop(ctx); err != nil {

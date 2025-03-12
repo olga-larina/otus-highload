@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/olga-larina/otus-highload/pkg/logger"
-	"github.com/olga-larina/otus-highload/social/internal/queue"
+	"github.com/olga-larina/otus-highload/pkg/queue"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 

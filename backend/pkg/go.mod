@@ -11,6 +11,7 @@ require (
 	github.com/oapi-codegen/oapi-codegen/v2 v2.4.1
 	github.com/oapi-codegen/runtime v1.1.1
 	github.com/pckilgore/combuuid v0.0.0-20240715172338-7cc918a108ae
+	github.com/rabbitmq/amqp091-go v1.10.0
 	go.opentelemetry.io/otel v1.33.0
 	go.opentelemetry.io/otel/sdk v1.33.0
 	go.opentelemetry.io/otel/trace v1.33.0

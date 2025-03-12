@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/olga-larina/otus-highload/pkg/logger"
+	"github.com/olga-larina/otus-highload/pkg/queue"
 	"github.com/olga-larina/otus-highload/pkg/tracing"
-	"github.com/olga-larina/otus-highload/social/internal/queue"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"go.opentelemetry.io/otel"
 )

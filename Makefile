@@ -6,6 +6,9 @@ BIN_BACKEND_SOCIAL_CLIENT:= "./backend/social/bin/client"
 BIN_BACKEND_DIALOG_SERVER := "./backend/dialog/bin/server"
 DOCKER_IMG_BACKEND_DIALOG_SERVER="backend-dialog-server:develop"
 
+BIN_BACKEND_VERIFIER_SERVER := "./backend/verifier/bin/server"
+DOCKER_IMG_BACKEND_VERIFIER_SERVER="backend-verifier-server:develop"
+
 BIN_BACKEND_DIALOG_GENERATOR := "./backend/dialog/bin/dialog-generator"
 
 DOCKER_IMG_MIGRATOR="backend-migrator:develop"
@@ -16,7 +19,7 @@ LDFLAGS := -X main.release="develop" -X main.buildDate=$(shell date -u +%Y-%m-%d
 # сгенерировать код по спецификации Open API
 .PHONY: generate_from_openapi
 generate_from_openapi:
-	cd backend/social && go generate ./... && cd ../dialog && go generate ./...
+	cd backend/social && go generate ./... && cd ../dialog && go generate ./... && cd ../verifier && go generate ./...
 
 # скомпилировать бинарные файлы сервиса соц.сети
 .PHONY: build_backend_social_server
@@ -43,10 +46,20 @@ run_backend_social_client: build_backend_social_client
 build_backend_dialog_server:
 	cd backend/dialog && go build -v -o $(BIN_BACKEND_DIALOG_SERVER) -ldflags "$(LDFLAGS)" ./cmd/server
 
-# собрать и запустить сервис соц.сети с конфигами по умолчанию
+# собрать и запустить сервис диалогов с конфигами по умолчанию
 .PHONY: run_backend_dialog_server
 run_backend_dialog_server: build_backend_dialog_server
 	cd backend/dialog && $(BIN_BACKEND_DIALOG_SERVER) -config ./configs/server_config_local.yaml
+
+# скомпилировать бинарные файлы сервиса верификации
+.PHONY: build_backend_verifier_server
+build_backend_verifier_server:
+	cd backend/verifier && go build -v -o $(BIN_BACKEND_VERIFIER_SERVER) -ldflags "$(LDFLAGS)" ./cmd/server
+
+# собрать и запустить сервис верификации с конфигами по умолчанию
+.PHONY: run_backend_verifier_server
+run_backend_verifier_server: build_backend_verifier_server
+	cd backend/verifier && $(BIN_BACKEND_VERIFIER_SERVER) -config ./configs/server_config_local.yaml
 
 # применить миграции Postgres (в ручном режиме)
 .PHONY: migrate

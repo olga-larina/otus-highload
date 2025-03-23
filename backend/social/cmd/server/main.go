@@ -24,6 +24,7 @@ import (
 	"github.com/olga-larina/otus-highload/pkg/service/auth"
 	pkg_sqlstorage "github.com/olga-larina/otus-highload/pkg/storage/sql"
 	"github.com/olga-larina/otus-highload/pkg/tracing"
+	"github.com/olga-larina/otus-highload/pkg/zabbix"
 	internalhttp "github.com/olga-larina/otus-highload/social/internal/server/http"
 	"github.com/olga-larina/otus-highload/social/internal/service"
 	cacher "github.com/olga-larina/otus-highload/social/internal/service/cache"
@@ -232,6 +233,13 @@ func main() {
 	postFeedService := feed.NewPostFeedService(postFeedCacher, config.PostFeed.MaxSize)
 	dialogService := dialog.NewDialogService(httpDialogClient)
 
+	// zabbix observer
+	zabbixObserver := zabbix.NewZabbixObserver(config.Zabbix.Host, config.Zabbix.Port, config.Zabbix.Period, config.Zabbix.Name)
+	if err := zabbixObserver.Start(ctx); err != nil {
+		logger.Error(ctx, err, "zabbixObserver failed to start")
+		return
+	}
+
 	// authentication function
 	authFunc := pkg_serverhttp.NewAuthenticator(authenticator, authenticator)
 
@@ -285,9 +293,9 @@ func main() {
 			},
 		})
 
-	router.Use(pkg_serverhttp.TracingMiddleware, pkg_serverhttp.LoggingMiddleware)
+	router.Use(pkg_serverhttp.TracingMiddleware, pkg_serverhttp.MetricsMiddleware, pkg_serverhttp.LoggingMiddleware)
 	skippedRoutes := []string{
-		internalhttp.METRICS_ROUTE,
+		pkg_serverhttp.METRICS_ROUTE,
 		internalhttp.CACHE_INVALIDATE_ROUTE,
 		internalhttp.POST_FEED_ROUTE,
 	}
@@ -348,6 +356,10 @@ func main() {
 
 	if err := queue.Stop(ctx); err != nil {
 		logger.Error(ctx, err, "failed to stop queue")
+	}
+
+	if err := zabbixObserver.Stop(ctx); err != nil {
+		logger.Error(ctx, err, "failed to stop zabbixObserver")
 	}
 }
 

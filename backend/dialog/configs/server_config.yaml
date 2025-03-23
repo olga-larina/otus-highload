@@ -34,3 +34,9 @@ inMemoryDatabase:
   user: ${TARANTOOL_USER}
   password: ${TARANTOOL_PASSWORD}
   concurrency: 512
+# Zabbix config
+zabbix:
+  host: ${ZABBIX_HOST}
+  port: ${ZABBIX_PORT}
+  period: "10s"
+  name: ${ZABBIX_NAME}

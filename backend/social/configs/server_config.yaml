@@ -63,3 +63,9 @@ caches:
   postFeed:
     uri: ${POST_FEED_CACHE_URI}
     ttl: 60m
+# Zabbix config
+zabbix:
+  host: ${ZABBIX_HOST}
+  port: ${ZABBIX_PORT}
+  period: "10s"
+  name: ${ZABBIX_NAME}

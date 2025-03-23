@@ -15,7 +15,6 @@ import (
 )
 
 const (
-	METRICS_ROUTE          = "/metrics"
 	CACHE_INVALIDATE_ROUTE = "/internal/cache/invalidate"
 	POST_FEED_ROUTE        = "/post/feed/posted"
 )
@@ -46,7 +45,7 @@ func NewManualRouter(
 	router := mux.NewRouter()
 
 	// роут с метриками
-	router.Handle(METRICS_ROUTE, promhttp.Handler()).Methods("GET")
+	router.Handle(pkg_http.METRICS_ROUTE, promhttp.Handler()).Methods("GET")
 
 	// роут с инвалидацией кеша
 	router.HandleFunc(CACHE_INVALIDATE_ROUTE, cacheInvalidateHandler(postNotifier)).Methods("POST")

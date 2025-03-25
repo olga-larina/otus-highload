@@ -1,9 +1,14 @@
 scrape_configs:
-- job_name: 'backend-server'
+- job_name: 'backend-social-server'
   scrape_interval: 5s
   static_configs:
   - targets:
-    - "backend-server:8080"
+    - "backend-social-server:8080"
+- job_name: 'backend-dialog-server'
+  scrape_interval: 5s
+  static_configs:
+  - targets:
+    - "backend-dialog-server:8080"
 - job_name: 'cadvisor'
   scrape_interval: 5s
   static_configs:

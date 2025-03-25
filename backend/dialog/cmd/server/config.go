@@ -16,6 +16,7 @@ type Config struct {
 	Timezone         string                 `mapstructure:"timezone"`
 	Auth             AuthConfig             `mapstructure:"auth"`
 	Dialogue         DialogueConfig         `mapstructure:"dialogue"`
+	Zabbix           ZabbixConfig           `mapstructure:"zabbix"`
 }
 
 type LoggerConfig struct {
@@ -57,6 +58,13 @@ type AuthConfig struct {
 
 type DialogueConfig struct {
 	DbType string `mapstructure:"dbType"`
+}
+
+type ZabbixConfig struct {
+	Host   string        `mapstructure:"host"`
+	Port   int           `mapstructure:"port"`
+	Period time.Duration `mapstructure:"period"`
+	Name   string        `mapstructure:"name"`
 }
 
 func NewConfig(path string) (*Config, error) {

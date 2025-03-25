@@ -27,6 +27,7 @@ import (
 	"github.com/olga-larina/otus-highload/pkg/service/auth"
 	pkg_sqlstorage "github.com/olga-larina/otus-highload/pkg/storage/sql"
 	"github.com/olga-larina/otus-highload/pkg/tracing"
+	"github.com/olga-larina/otus-highload/pkg/zabbix"
 	"github.com/rs/cors"
 )
 
@@ -129,6 +130,13 @@ func main() {
 	authService := auth.NewAuthService()
 	dialogService := service.NewDialogService(dialogStorage, dialogIdObtainer)
 
+	// zabbix observer
+	zabbixObserver := zabbix.NewZabbixObserver(config.Zabbix.Host, config.Zabbix.Port, config.Zabbix.Period, config.Zabbix.Name)
+	if err := zabbixObserver.Start(ctx); err != nil {
+		logger.Error(ctx, err, "zabbixObserver failed to start")
+		return
+	}
+
 	// authentication function
 	authFunc := pkg_http.NewAuthenticator(authenticator, authenticator)
 
@@ -172,9 +180,9 @@ func main() {
 				AuthenticationFunc: authFunc,
 			},
 		})
-	router.Use(pkg_http.TracingMiddleware, pkg_http.LoggingMiddleware)
+	router.Use(pkg_http.TracingMiddleware, pkg_http.MetricsMiddleware, pkg_http.LoggingMiddleware)
 	router.Use(func(next http.Handler) http.Handler {
-		return pkg_http.SkipValidatorForManualRoutes(validator, next, []string{"/metrics"})
+		return pkg_http.SkipValidatorForManualRoutes(validator, next, []string{pkg_http.METRICS_ROUTE})
 	})
 
 	c := cors.New(cors.Options{
@@ -207,6 +215,10 @@ func main() {
 	}
 
 	<-ctx.Done()
+
+	if err := zabbixObserver.Stop(ctx); err != nil {
+		logger.Error(ctx, err, "failed to stop zabbixObserver")
+	}
 }
 
 func parseDbConfig(uri string, cfg DatabaseConnectConfig) *pkg_sqlstorage.DbConfig {

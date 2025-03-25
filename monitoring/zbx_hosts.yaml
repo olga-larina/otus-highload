@@ -1,0 +1,20 @@
+zabbix_export:
+  version: '6.4'
+  host_groups:
+    - uuid: a571c0d144b14fd4a87a9d9b2aa9fcd6
+      name: Applications
+  hosts:
+    - host: dialog-server
+      name: dialog-server
+      templates:
+        - name: 'Template Highload Server'
+      groups:
+        - name: Applications
+      inventory_mode: DISABLED
+    - host: social-server
+      name: social-server
+      templates:
+        - name: 'Template Highload Server'
+      groups:
+        - name: Applications
+      inventory_mode: DISABLED

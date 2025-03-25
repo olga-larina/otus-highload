@@ -41,3 +41,9 @@ inMemoryDatabase:
   user: otus
   password: secretpassword
   concurrency: 512
+# Zabbix config
+zabbix:
+  host: localhost
+  port: 10051
+  period: "10s"
+  name: dialog-server

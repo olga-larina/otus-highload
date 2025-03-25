@@ -1,0 +1,51 @@
+zabbix_export:
+  version: '6.4'
+  template_groups:
+    - uuid: a571c0d144b14fd4a87a9d9b2aa9fcd6
+      name: Templates/Applications
+  templates:
+    - uuid: 5ff8f2989f904ad19f6044902f329d12
+      template: 'Template Highload Server'
+      name: 'Template Highload Server'
+      groups:
+        - name: Templates/Applications
+      items:
+        - uuid: 5630dbfadc264d279f6727dd916e0d4b
+          name: 'CPU Idle'
+          type: TRAP
+          key: cpu-idle
+          delay: '0'
+          value_type: FLOAT
+          units: percents
+        - uuid: 0870864af56a4e55930a21c238ca833b
+          name: 'CPU System'
+          type: TRAP
+          key: cpu-system
+          delay: '0'
+          value_type: FLOAT
+          units: percents
+        - uuid: 1822a27864914b68bb59aada23d4e611
+          name: 'CPU User'
+          type: TRAP
+          key: cpu-user
+          delay: '0'
+          value_type: FLOAT
+          units: percents
+        - uuid: d9832a2e12b14f30a76cf620c412a30e
+          name: 'Memory Cached'
+          type: TRAP
+          key: mem-cached
+          delay: '0'
+          units: bytes
+        - uuid: df6b5ad5c9914a9c8993f4313d25b36a
+          name: 'Memory Free'
+          type: TRAP
+          key: mem-free
+          delay: '0'
+          units: bytes
+        - uuid: 3ac1ee5562b64229828f71b77c22c807
+          name: 'Memory Used'
+          type: TRAP
+          key: mem-used
+          delay: '0'
+          units: bytes

@@ -19,6 +19,7 @@ type Config struct {
 	Cache      CachesConfig     `mapstructure:"caches"`
 	PostFeed   PostFeedConfig   `mapstructure:"postFeed"`
 	Dialogue   DialogueConfig   `mapstructure:"dialogue"`
+	Zabbix     ZabbixConfig     `mapstructure:"zabbix"`
 }
 
 type LoggerConfig struct {
@@ -89,6 +90,13 @@ type CachesConfig struct {
 type CacheConfig struct {
 	URI string        `mapstructure:"uri"`
 	Ttl time.Duration `mapstructure:"ttl"`
+}
+
+type ZabbixConfig struct {
+	Host   string        `mapstructure:"host"`
+	Port   int           `mapstructure:"port"`
+	Period time.Duration `mapstructure:"period"`
+	Name   string        `mapstructure:"name"`
 }
 
 func NewConfig(path string) (*Config, error) {

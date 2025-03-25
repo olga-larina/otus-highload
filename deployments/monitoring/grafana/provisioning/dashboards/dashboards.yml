@@ -1,0 +1,12 @@
+apiVersion: 1
+providers:
+  - name: RED Backend Dashboard
+    folder: RED
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards/red
+  - name: Imported Prometheus
+    folder: Imported
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards/imported

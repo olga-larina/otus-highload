@@ -70,3 +70,9 @@ caches:
   postFeed:
     uri: redis://localhost:6379/1?protocol=3&db=1
     ttl: 60m
+# Zabbix config
+zabbix:
+  host: localhost
+  port: 10051
+  period: "10s"
+  name: social-server
